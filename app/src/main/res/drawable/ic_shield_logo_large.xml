@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+  <!-- Shield outline -->
+  <path
+      android:fillColor="#0ABAB5"
+      android:pathData="M32,4C20,4 12,8 12,12v20c0,12 8,20 20,24l0,0c12,-4 20,-12 20,-24V12c0,-4 -8,-8 -20,-8z"/>
+  <!-- Inner shield detail -->
+  <path
+      android:fillColor="#007FFF"
+      android:pathData="M32,8C22,8 16,10 16,14v18c0,10 6,16 16,20l0,0c10,-4 16,-10 16,-20V14c0,-4 -6,-6 -16,-6z"/>
+  <!-- S mark -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M24,20L40,20L40,24L28,24L28,28L38,28L38,32L28,32L28,36L40,36L40,40L24,40L24,20z"/>
+  <!-- AI mark -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M26,46L38,46L38,50L34,50L34,56L30,56L30,50L26,50L26,46z"/>
+</vector>
