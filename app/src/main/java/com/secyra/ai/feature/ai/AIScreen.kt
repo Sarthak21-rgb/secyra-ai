@@ -309,12 +309,13 @@ fun AIAssistantHomeScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 22.sp
                                 )
-                                Text(
+                                GradientText(
                                     text = "AI",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TiffanyBlue,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 22.sp
+                                    colors = listOf(AzureBlue, TiffanyBlue),
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 22.sp
+                                    )
                                 )
                             }
                             Text(
