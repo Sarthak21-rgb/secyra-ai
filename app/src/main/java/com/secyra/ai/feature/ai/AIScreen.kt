@@ -54,11 +54,8 @@ fun GradientText(
     val brush = Brush.horizontalGradient(colors = colors)
     Text(
         text = text,
-        style = style,
-        color = Color.Transparent,
-        modifier = modifier.drawBehind {
-            drawRect(brush)
-        }
+        style = style.copy(brush = brush),
+        modifier = modifier
     )
 }
 
@@ -381,17 +378,24 @@ fun AIAssistantHomeScreen(
                             )
                         )
                     }
-                    Text(
-                        text = buildAnnotatedString {
-                            append("How can I ")
-                            withStyle(SpanStyle(color = TiffanyBlue)) {
-                                append("help you today?")
-                            }
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = SecyraTextMuted,
-                        fontSize = 18.sp
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "How can I ",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SecyraTextMuted,
+                            fontSize = 18.sp
+                        )
+                        GradientText(
+                            text = "help you today?",
+                            colors = listOf(AzureBlue, TiffanyBlue),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 18.sp
+                            )
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
