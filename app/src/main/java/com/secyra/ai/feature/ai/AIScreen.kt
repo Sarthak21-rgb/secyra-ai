@@ -27,14 +27,40 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.secyra.ai.R
 import com.secyra.ai.core.ui.theme.*
 import com.secyra.ai.navigation.Screen
+
+// Gradient text composable
+@Composable
+fun GradientText(
+    text: String,
+    colors: List<Color>,
+    style: TextStyle = TextStyle.Default,
+    modifier: Modifier = Modifier
+) {
+    val brush = Brush.horizontalGradient(colors = colors)
+    Text(
+        text = text,
+        style = style,
+        color = Color.Transparent,
+        modifier = modifier.drawBehind {
+            drawRect(brush)
+        }
+    )
+}
 
 @Composable
 fun AIScreen(
@@ -46,6 +72,7 @@ fun AIScreen(
     var attachments by remember { mutableStateOf<List<String>>(emptyList()) }
     var showChat by remember { mutableStateOf(false) }
     var showSidebar by remember { mutableStateOf(false) }
+    var isRecording by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // Handle navigation to Pro subscription
@@ -66,28 +93,17 @@ fun AIScreen(
         }
     }
 
-    // Speech recognition launcher
-    val speechRecognizerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        // Handle speech recognition result
-        val results = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
-        results?.firstOrNull()?.let {
-            viewModel.onInputChange(uiState.inputText + " " + it)
-        }
+    // Custom voice input placeholder
+    val startVoiceInput: () -> Unit = {
+        isRecording = true
+        // TODO: Implement custom voice recognition backend
+        // This will connect to a custom backend for speech-to-text
+        // Currently shows recording state
     }
 
-    val startVoiceInput: () -> Unit = {
-        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault())
-            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak now")
-        }
-        try {
-            speechRecognizerLauncher.launch(intent)
-        } catch (e: Exception) {
-            // Speech recognition not available
-        }
+    val stopVoiceInput: () -> Unit = {
+        isRecording = false
+        // TODO: Process audio and get text from backend
     }
 
     AIAssistantHomeScreen(
@@ -108,6 +124,8 @@ fun AIScreen(
         onToggleSidebar = { showSidebar = !showSidebar },
         onAddAttachment = { filePickerLauncher.launch("*/*") },
         onStartVoiceInput = startVoiceInput,
+        onStopVoiceInput = stopVoiceInput,
+        isRecording = isRecording,
         attachments = attachments,
         onRemoveAttachment = { index ->
             attachments = attachments.toMutableList().apply { removeAt(index) }
@@ -142,6 +160,8 @@ fun AIAssistantHomeScreen(
     onToggleSidebar: () -> Unit,
     onAddAttachment: () -> Unit,
     onStartVoiceInput: () -> Unit,
+    onStopVoiceInput: () -> Unit,
+    isRecording: Boolean,
     attachments: List<String>,
     onRemoveAttachment: (Int) -> Unit
 ) {
@@ -168,7 +188,7 @@ fun AIAssistantHomeScreen(
                             androidx.compose.foundation.Image(
                                 painter = painterResource(R.drawable.robot),
                                 contentDescription = null,
-                                modifier = Modifier.size(120.dp),
+                                modifier = Modifier.size(200.dp),
                                 contentScale = ContentScale.Fit
                             )
                             Text(
@@ -253,7 +273,9 @@ fun AIAssistantHomeScreen(
                         onInputChange = onInputChange,
                         onSend = { onSendMessage(it) },
                         onAddAttachment = onAddAttachment,
-                        onStartVoiceInput = onStartVoiceInput
+                        onStartVoiceInput = onStartVoiceInput,
+                        onStopVoiceInput = onStopVoiceInput,
+                        isRecording = isRecording
                     )
                 }
             }
@@ -275,9 +297,9 @@ fun AIAssistantHomeScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.foundation.Image(
-                            painter = painterResource(R.drawable.ic_shield_logo),
+                            painter = painterResource(R.drawable.shield_logo),
                             contentDescription = null,
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(46.dp),
                             contentScale = ContentScale.Fit
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -309,78 +331,70 @@ fun AIAssistantHomeScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(44.dp)
                                 .clickable { onNavigate(Screen.Notifications) },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Notifications,
                                 contentDescription = "Notifications",
-                                tint = TiffanyBlue,
-                                modifier = Modifier.size(24.dp)
+                                tint = SecyraWhite,
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                         IconButton(
                             onClick = onToggleSidebar,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
                                 contentDescription = "Menu",
-                                tint = TiffanyBlue,
-                                modifier = Modifier.size(24.dp)
+                                tint = SecyraWhite,
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
                 }
 
-                // Greeting and Robot
-                Row(
+                Spacer(modifier = Modifier.height(48.dp))
+
+                // App Name and Greeting
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Hello,",
-                            style = MaterialTheme.typography.headlineMedium,
+                            text = "SECYRA ",
+                            style = MaterialTheme.typography.headlineLarge,
                             color = SecyraWhite,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp
+                            fontSize = 32.sp
                         )
-                        Text(
-                            text = buildAnnotatedString {
-                                append("How can I ")
-                                withStyle(SpanStyle(color = TiffanyBlue)) {
-                                    append("help you today?")
-                                }
-                            },
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = SecyraWhite,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 24.sp
-                        )
-                        Text(
-                            text = "Ask anything about your security, calls, messages, or online activity.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SecyraTextMuted,
-                            fontSize = 15.sp,
-                            lineHeight = 20.sp
+                        GradientText(
+                            text = "AI",
+                            colors = listOf(AzureBlue, TiffanyBlue),
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 32.sp
+                            )
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(R.drawable.robot),
-                        contentDescription = "Secyra AI Robot",
-                        modifier = Modifier
-                            .width(180.dp)
-                            .height(180.dp),
-                        contentScale = ContentScale.Fit
+                    Text(
+                        text = buildAnnotatedString {
+                            append("How can I ")
+                            withStyle(SpanStyle(color = TiffanyBlue)) {
+                                append("help you today?")
+                            }
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SecyraTextMuted,
+                        fontSize = 18.sp
                     )
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Quick Actions Header
                 Text(
@@ -436,7 +450,7 @@ fun AIAssistantHomeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(100.dp))
 
                 // Chat Composer
                 Column(
@@ -464,7 +478,9 @@ fun AIAssistantHomeScreen(
                         onInputChange = onInputChange,
                         onSend = { onSendMessage(it) },
                         onAddAttachment = onAddAttachment,
-                        onStartVoiceInput = onStartVoiceInput
+                        onStartVoiceInput = onStartVoiceInput,
+                        onStopVoiceInput = onStopVoiceInput,
+                        isRecording = isRecording
                     )
                 }
             }
@@ -483,7 +499,7 @@ fun QuickActionCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .height(110.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF050B12)
@@ -494,12 +510,12 @@ fun QuickActionCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(36.dp)
                     .background(TiffanyBlue.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -507,23 +523,23 @@ fun QuickActionCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = TiffanyBlue,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = SecyraWhite,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = SecyraTextMuted,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
                 )
             }
             Icon(
@@ -531,7 +547,7 @@ fun QuickActionCard(
                 contentDescription = null,
                 tint = TiffanyBlue,
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(16.dp)
                     .align(Alignment.End)
             )
         }
@@ -544,7 +560,9 @@ fun ChatComposer(
     onInputChange: (String) -> Unit,
     onSend: (String) -> Unit,
     onAddAttachment: () -> Unit,
-    onStartVoiceInput: () -> Unit
+    onStartVoiceInput: () -> Unit,
+    onStopVoiceInput: () -> Unit,
+    isRecording: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -597,12 +615,12 @@ fun ChatComposer(
         )
         
         IconButton(
-            onClick = onStartVoiceInput,
+            onClick = { if (isRecording) onStopVoiceInput() else onStartVoiceInput() },
             modifier = Modifier.size(40.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Mic,
-                contentDescription = "Voice input",
+                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                contentDescription = if (isRecording) "Stop recording" else "Voice input",
                 tint = SecyraWhite,
                 modifier = Modifier.size(24.dp)
             )
@@ -614,7 +632,7 @@ fun ChatComposer(
             modifier = Modifier
                 .size(40.dp)
                 .background(
-                    if (inputText.isNotBlank()) AzureBlue else Color.Gray,
+                    if (inputText.isNotBlank()) AzureBlue else AzureBlue.copy(alpha = 0.4f),
                     CircleShape
                 )
         ) {
