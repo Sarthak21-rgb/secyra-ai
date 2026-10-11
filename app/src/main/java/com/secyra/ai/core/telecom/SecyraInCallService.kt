@@ -6,7 +6,6 @@ import android.telecom.Call
 import android.telecom.InCallService
 import android.telecom.CallEndpoint
 import com.secyra.ai.feature.calls.ActiveCallActivity
-import com.secyra.ai.feature.calls.IncomingCallActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -30,8 +29,11 @@ class SecyraInCallService : InCallService() {
         // Register the real call with our CallManager
         callManager.setActiveCall(call)
 
-        // Don't launch any screen directly - let notification handle it
-        // CallManager will show appropriate notification based on call state
+        // Launch the active call screen
+        val intent = Intent(this, ActiveCallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
     }
 
     override fun onCallRemoved(call: Call) {

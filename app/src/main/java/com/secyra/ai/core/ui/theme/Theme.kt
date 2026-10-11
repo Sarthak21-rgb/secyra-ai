@@ -65,9 +65,6 @@ fun SecyraTheme(
             WindowCompat.setDecorFitsSystemWindows(window, false)
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
             WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
-            
-            // Force the navigation bar to be transparent with light navigation area
-            window.isNavigationBarContrastEnforced = false
         }
     }
 

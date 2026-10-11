@@ -9,6 +9,8 @@
     <string name="nav_scan">Scan</string>
     <string name="nav_ai">AI</string>
     <string name="nav_security">Security</string>
+    <string name="nav_messages">Messages</string>
+    <string name="nav_emails">Emails</string>
     
     <!-- Common -->
     <string name="loading">Loading…</string>

@@ -3,12 +3,18 @@ package com.secyra.ai.feature.calls
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.PhoneMissed
 import android.content.Intent
 import android.net.Uri
 import com.secyra.ai.core.permissions.PermissionManager
 import com.secyra.ai.core.security.SecurityEngine
 import com.secyra.ai.core.telecom.CallManager
 import com.secyra.ai.core.telecom.DefaultPhoneRoleManager
+import com.secyra.ai.core.telecom.CallGroupingService
+import com.secyra.ai.core.telecom.CallGroupingConfig
+import com.secyra.ai.core.telecom.CallGroup
 import com.secyra.ai.core.ui.theme.RiskHigh
 import com.secyra.ai.core.ui.theme.RiskLow
 import com.secyra.ai.core.ui.theme.SecyraTextMuted
@@ -32,7 +38,8 @@ class CallsViewModel @Inject constructor(
     private val callLogRepository: CallLogRepository,
     private val contactRepository: ContactRepository,
     private val callManager: CallManager,
-    private val defaultPhoneRoleManager: DefaultPhoneRoleManager
+    private val defaultPhoneRoleManager: DefaultPhoneRoleManager,
+    private val callGroupingService: CallGroupingService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CallsUiState())
@@ -40,12 +47,21 @@ class CallsViewModel @Inject constructor(
 
     private var allCalls: List<CallItem> = emptyList()
     private var allContacts: List<Contact> = emptyList()
+    private var allCallGroups: List<CallGroup> = emptyList()
 
     init {
         loadRecentCalls()
         loadContacts()
         loadBlockedNumbers()
         checkDefaultPhoneStatus()
+    }
+
+    fun onPageSelected(page: PageIndex) {
+        _uiState.value = _uiState.value.copy(selectedPage = page)
+    }
+
+    fun onTabSelected(tab: CallTab) {
+        _uiState.value = _uiState.value.copy(selectedTab = tab)
     }
 
     private fun checkDefaultPhoneStatus() {
@@ -55,17 +71,136 @@ class CallsViewModel @Inject constructor(
     private fun loadRecentCalls() {
         viewModelScope.launch {
             try {
-                val calls = callLogRepository.getRecentCalls(limit = 50)
-                allCalls = calls
+                // Load raw call records for grouping
+                val rawCalls = callLogRepository.getRawCallRecords(limit = 1000)
+                android.util.Log.d("CallsViewModel", "Total raw calls from repository: ${rawCalls.size}")
+
+                // Group calls using the grouping service
+                val groupingResult = callGroupingService.groupCalls(rawCalls)
+                allCallGroups = groupingResult.groups
+                android.util.Log.d("CallsViewModel", "Total call groups created: ${groupingResult.totalGroups}")
+
+                // Convert grouped calls back to CallItem for UI compatibility
+                val groupedCallItems = groupingResult.groups.flatMap { group ->
+                    group.calls.map { rawCall ->
+                        convertRawCallToCallItem(rawCall, group)
+                    }
+                }
+
+                allCalls = groupedCallItems
+
+                // Don't filter by time here - let the UI tabs handle filtering
+                // Recent tab will filter to 3 days, All tab will filter to 7 months
                 _uiState.value = _uiState.value.copy(
-                    recentCalls = calls
+                    recentCalls = groupedCallItems,
+                    callGroups = groupingResult.groups
                 )
             } catch (e: Exception) {
-                // Fallback to sample data if call log access fails
-                allCalls = generateSampleCalls()
+                android.util.Log.e("CallsViewModel", "Error loading calls", e)
+                // If call log access fails, show empty state instead of sample data
                 _uiState.value = _uiState.value.copy(
-                    recentCalls = allCalls
+                    recentCalls = emptyList(),
+                    callGroups = emptyList()
                 )
+            }
+        }
+    }
+
+    /**
+     * Convert a RawCallRecord to CallItem for UI display
+     */
+    private fun convertRawCallToCallItem(rawCall: com.secyra.ai.core.telecom.RawCallRecord, group: CallGroup): CallItem {
+        val displayName = rawCall.contactName ?: "Unknown"
+        val truncatedName = if (displayName.length > 20) {
+            displayName.take(20) + "..."
+        } else {
+            displayName
+        }
+        val initials = if (rawCall.contactName != null && rawCall.contactName.isNotEmpty()) {
+            rawCall.contactName.first().toString().uppercase()
+        } else {
+            "U"
+        }
+
+        val callType = when (rawCall.callType) {
+            com.secyra.ai.core.telecom.CallType.INCOMING -> CallType.INCOMING
+            com.secyra.ai.core.telecom.CallType.OUTGOING -> CallType.OUTGOING
+            com.secyra.ai.core.telecom.CallType.MISSED -> CallType.MISSED
+            com.secyra.ai.core.telecom.CallType.REJECTED -> CallType.REJECTED
+            com.secyra.ai.core.telecom.CallType.BLOCKED -> CallType.BLOCKED
+            com.secyra.ai.core.telecom.CallType.VOICEMAIL -> CallType.INCOMING
+            com.secyra.ai.core.telecom.CallType.UNKNOWN -> CallType.UNKNOWN
+        }
+
+        val callTypeLabel = when (callType) {
+            CallType.INCOMING -> "Incoming"
+            CallType.OUTGOING -> "Outgoing"
+            CallType.MISSED -> "Missed"
+            CallType.REJECTED -> "Declined"
+            CallType.BLOCKED -> "Blocked"
+            CallType.UNKNOWN -> "Call"
+        }
+
+        val callTypeIcon = when (callType) {
+            CallType.INCOMING -> Icons.Default.Phone
+            CallType.OUTGOING -> Icons.Default.Phone
+            CallType.MISSED -> Icons.AutoMirrored.Filled.PhoneMissed
+            CallType.REJECTED -> Icons.Default.PhoneDisabled
+            CallType.BLOCKED -> Icons.Default.Block
+            CallType.UNKNOWN -> Icons.Default.Phone
+        }
+
+        val isSpam = group.isBlocked
+        val securityTag = when {
+            isSpam -> SecurityTag.BLOCKED
+            rawCall.contactName != null -> SecurityTag.UNKNOWN // Saved contact - will be hidden in UI
+            else -> SecurityTag.UNKNOWN
+        }
+
+        return CallItem(
+            id = rawCall.id.toString(),
+            name = truncatedName,
+            initials = initials,
+            status = callTypeLabel,
+            statusColor = if (isSpam) RiskHigh else SecyraTextSecondary,
+            avatarColor = TiffanyBlue, // Will be computed in UI based on contact
+            timestamp = formatTimestamp(rawCall.timestampMillis),
+            phoneNumber = rawCall.phoneNumber,
+            isSpam = isSpam,
+            isTrusted = false, // Only for premium users
+            callIconColor = if (isSpam) RiskHigh else TiffanyBlue,
+            isSavedContact = rawCall.isSavedContact,
+            contactId = null,
+            callCountInHour = group.totalCallCount, // Use group count
+            callTypeIcon = callTypeIcon,
+            callType = callType,
+            securityTag = securityTag,
+            timestampMillis = rawCall.timestampMillis
+        )
+    }
+
+    private fun formatTimestamp(timestampMillis: Long): String {
+        val now = System.currentTimeMillis()
+        val diff = now - timestampMillis
+        val dayInMillis = 24 * 60 * 60 * 1000L
+
+        return when {
+            diff < dayInMillis -> {
+                // Today - show time
+                val date = java.util.Date(timestampMillis)
+                val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                timeFormat.format(date)
+            }
+            diff < 2 * dayInMillis -> "Yesterday"
+            diff < 7 * dayInMillis -> {
+                val date = java.util.Date(timestampMillis)
+                val dayFormat = java.text.SimpleDateFormat("EEEE", java.util.Locale.getDefault())
+                dayFormat.format(date)
+            }
+            else -> {
+                val date = java.util.Date(timestampMillis)
+                val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
+                dateFormat.format(date)
             }
         }
     }
@@ -73,7 +208,7 @@ class CallsViewModel @Inject constructor(
     private fun loadContacts() {
         viewModelScope.launch {
             try {
-                val contacts = contactRepository.getAllContacts()
+                val contacts = contactRepository.searchContacts(query = "", limit = 100)
                 allContacts = contacts
                 _uiState.value = _uiState.value.copy(contacts = contacts)
             } catch (e: Exception) {
@@ -94,135 +229,42 @@ class CallsViewModel @Inject constructor(
         }
     }
 
-    private fun generateSampleCalls(): List<CallItem> {
-        return listOf(
-            CallItem(
-                id = "1",
-                name = "Unknown",
-                initials = "U",
-                status = "Potential spam",
-                statusColor = RiskHigh,
-                avatarColor = Color(0xFF3F1C1C),
-                timestamp = "Today, 4:32 PM",
-                phoneNumber = "+1 555-0123",
-                isSpam = true,
-                isTrusted = false,
-                callIconColor = RiskHigh
-            ),
-            CallItem(
-                id = "2",
-                name = "Mom",
-                initials = "M",
-                status = "Trusted contact",
-                statusColor = RiskLow,
-                avatarColor = Color(0xFF1C3F2C),
-                timestamp = "Today, 3:15 PM",
-                phoneNumber = "+1 555-0456",
-                isSpam = false,
-                isTrusted = true,
-                callIconColor = TiffanyBlue
-            ),
-            CallItem(
-                id = "3",
-                name = "Raj",
-                initials = "R",
-                status = "Mobile",
-                statusColor = SecyraTextSecondary,
-                avatarColor = Color(0xFF2C2C2C),
-                timestamp = "Today, 2:30 PM",
-                phoneNumber = "+91 98765 43210",
-                isSpam = false,
-                isTrusted = false,
-                callIconColor = TiffanyBlue
-            ),
-            CallItem(
-                id = "4",
-                name = "Unknown",
-                initials = "U",
-                status = "Suspicious pattern",
-                statusColor = RiskHigh,
-                avatarColor = Color(0xFF3F1C1C),
-                timestamp = "Today, 1:45 PM",
-                phoneNumber = "+1 800-555-0199",
-                isSpam = true,
-                isTrusted = false,
-                callIconColor = RiskHigh
-            ),
-            CallItem(
-                id = "5",
-                name = "Priya",
-                initials = "P",
-                status = "Mobile",
-                statusColor = SecyraTextSecondary,
-                avatarColor = Color(0xFF2C3C4C),
-                timestamp = "Yesterday, 6:20 PM",
-                phoneNumber = "+91 87654 32109",
-                isSpam = false,
-                isTrusted = false,
-                callIconColor = TiffanyBlue
-            ),
-            CallItem(
-                id = "6",
-                name = "Unknown",
-                initials = "U",
-                status = "Reported by community",
-                statusColor = RiskHigh,
-                avatarColor = Color(0xFF3F1C1C),
-                timestamp = "Yesterday, 4:10 PM",
-                phoneNumber = "+1 555-9876",
-                isSpam = true,
-                isTrusted = false,
-                callIconColor = RiskHigh
-            ),
-            CallItem(
-                id = "7",
-                name = "Suresh",
-                initials = "S",
-                status = "Trusted contact",
-                statusColor = RiskLow,
-                avatarColor = Color(0xFF1C3F2C),
-                timestamp = "Yesterday, 2:55 PM",
-                phoneNumber = "+91 76543 21098",
-                isSpam = false,
-                isTrusted = true,
-                callIconColor = TiffanyBlue
-            ),
-            CallItem(
-                id = "8",
-                name = "Unknown",
-                initials = "U",
-                status = "Likely spam",
-                statusColor = RiskHigh,
-                avatarColor = Color(0xFF3F1C1C),
-                timestamp = "Yesterday, 11:30 AM",
-                phoneNumber = "+1 800-SCAM-01",
-                isSpam = true,
-                isTrusted = false,
-                callIconColor = RiskHigh
-            )
-        )
-    }
+    // Sample data generation removed - using real call log data only
+    // private fun generateSampleCalls(): List<CallItem> { ... }
 
     fun onSearchChange(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
         
-        // Search contacts based on query
-        viewModelScope.launch {
-            try {
-                val contacts = if (query.isBlank()) {
-                    allContacts
-                } else {
-                    contactRepository.searchContacts(query)
-                }
-                _uiState.value = _uiState.value.copy(searchResults = contacts)
-            } catch (e: Exception) {
-                // Ignore search errors
+        // Filter calls based on search query
+        val filteredCalls = if (query.isBlank()) {
+            allCalls
+        } else {
+            allCalls.filter { call ->
+                call.name.contains(query, ignoreCase = true) ||
+                call.phoneNumber.contains(query, ignoreCase = true) ||
+                call.status.contains(query, ignoreCase = true)
             }
         }
-    }
-
-    fun onTabSelected(tab: CallTab) {
-        _uiState.value = _uiState.value.copy(selectedTab = tab)
+        
+        // Also search contacts
+        val filteredContacts = if (query.isBlank()) {
+            emptyList<Contact>()
+        } else {
+            viewModelScope.launch {
+                try {
+                    val contacts = contactRepository.searchContacts(query, limit = 20)
+                    _uiState.value = _uiState.value.copy(searchResults = contacts)
+                } catch (e: Exception) {
+                    // Ignore search errors
+                }
+            }
+            emptyList<Contact>()
+        }
+        
+        _uiState.value = _uiState.value.copy(
+            recentCalls = filteredCalls,
+            searchResults = emptyList<Contact>() // Will be populated by coroutine
+        )
     }
 
     fun onUnblockNumber(blocked: BlockedNumber) {
@@ -254,30 +296,8 @@ class CallsViewModel @Inject constructor(
         )
     }
 
-    fun onSearchClick() {
-        _uiState.value = _uiState.value.copy(isSearchActive = true)
-    }
-
-    fun onCloseSearch() {
-        _uiState.value = _uiState.value.copy(
-            isSearchActive = false,
-            searchQuery = ""
-        )
-    }
-
     fun onCallClick(call: CallItem) {
         // TODO: Navigate to call details screen
-    }
-
-    fun onCallContact(contact: Contact) {
-        // Trigger a phone call
-        val intent = Intent(Intent.ACTION_CALL).apply {
-            data = Uri.parse("tel:${contact.phoneNumber}")
-        }
-        // This will be handled by the UI layer which has access to context
-        _uiState.value = _uiState.value.copy(
-            callIntent = intent
-        )
     }
 
     fun onCallPhoneNumber(phoneNumber: String) {
@@ -299,11 +319,97 @@ class CallsViewModel @Inject constructor(
     fun onCallIntentHandled() {
         _uiState.value = _uiState.value.copy(callIntent = null)
     }
+
+    fun onViewContactProfile(call: CallItem) {
+        _uiState.value = _uiState.value.copy(selectedContactForProfile = call)
+    }
+
+    fun onContactProfileDismissed() {
+        _uiState.value = _uiState.value.copy(selectedContactForProfile = null)
+    }
+
+    fun onCallContact(contact: Contact) {
+        // Trigger a phone call
+        val intent = Intent(Intent.ACTION_CALL).apply {
+            data = Uri.parse("tel:${contact.phoneNumber}")
+        }
+        _uiState.value = _uiState.value.copy(
+            callIntent = intent
+        )
+    }
+
+    fun onViewContactProfileForContact(contact: Contact) {
+        val callItem = CallItem(
+            id = contact.id,
+            name = contact.name,
+            initials = if (contact.name.isNotEmpty()) contact.name.first().toString().uppercase() else "C",
+            status = "Contact",
+            statusColor = SecyraTextSecondary,
+            avatarColor = TiffanyBlue.copy(alpha = 0.15f),
+            timestamp = "",
+            phoneNumber = contact.phoneNumber,
+            isSpam = false,
+            isTrusted = true,
+            callIconColor = TiffanyBlue,
+            isSavedContact = true,
+            contactId = contact.id,
+            callCountInHour = 0,
+            callTypeIcon = Icons.Default.Phone,
+            callType = CallType.UNKNOWN,
+            securityTag = SecurityTag.TRUSTED
+        )
+        _uiState.value = _uiState.value.copy(selectedContactForProfile = callItem)
+    }
+
+    fun onBlockNumber(phoneNumber: String) {
+        viewModelScope.launch {
+            // Add to blocked numbers list
+            val blockedNumber = BlockedNumber(
+                id = phoneNumber,
+                number = phoneNumber,
+                displayName = _uiState.value.selectedContactForProfile?.name ?: "Unknown",
+                blockedAt = System.currentTimeMillis().toString()
+            )
+            val currentBlocked = _uiState.value.blockedNumbers.toMutableList()
+            currentBlocked.add(blockedNumber)
+            _uiState.value = _uiState.value.copy(blockedNumbers = currentBlocked)
+
+            // Update recent calls to mark as blocked
+            val updatedCalls = _uiState.value.recentCalls.map { call ->
+                if (call.phoneNumber == phoneNumber) {
+                    call.copy(isSpam = true)
+                } else {
+                    call
+                }
+            }
+            _uiState.value = _uiState.value.copy(recentCalls = updatedCalls)
+        }
+    }
+
+    fun onUnblockNumber(phoneNumber: String) {
+        viewModelScope.launch {
+            // Remove from blocked numbers list
+            val currentBlocked = _uiState.value.blockedNumbers.toMutableList()
+            currentBlocked.removeAll { it.number == phoneNumber }
+            _uiState.value = _uiState.value.copy(blockedNumbers = currentBlocked)
+
+            // Update recent calls to remove blocked status
+            val updatedCalls = _uiState.value.recentCalls.map { call ->
+                if (call.phoneNumber == phoneNumber) {
+                    call.copy(isSpam = false)
+                } else {
+                    call
+                }
+            }
+            _uiState.value = _uiState.value.copy(recentCalls = updatedCalls)
+        }
+    }
 }
 
 data class CallsUiState(
     val searchQuery: String = "",
     val selectedTab: CallTab = CallTab.Recent,
+    val selectedPage: PageIndex = PageIndex.Calls,
     val recentCalls: List<CallItem> = emptyList(),
     val contacts: List<Contact> = emptyList(),
     val blockedNumbers: List<BlockedNumber> = emptyList(),
@@ -311,7 +417,8 @@ data class CallsUiState(
     val callIntent: Intent? = null,
     val isDefaultPhoneApp: Boolean = false,
     val showDefaultPhoneRequest: Boolean = false,
-    val isSearchActive: Boolean = false
+    val selectedContactForProfile: CallItem? = null,
+    val callGroups: List<com.secyra.ai.core.telecom.CallGroup> = emptyList()
 )
 
 data class CallItem(
@@ -326,14 +433,44 @@ data class CallItem(
     val isSpam: Boolean,
     val isTrusted: Boolean,
     val callIconColor: Color,
-    val callDirection: String = "unknown",
-    val isMissed: Boolean = false
+    val isSavedContact: Boolean = false,
+    val contactId: String? = null,
+    val callCountInHour: Int = 0,
+    val callTypeIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    val callType: CallType,
+    val securityTag: SecurityTag,
+    val timestampMillis: Long = System.currentTimeMillis()
 )
 
-enum class CallTab {
-    Recent,
-    Contacts,
-    Blocked
+enum class CallType {
+    INCOMING,
+    OUTGOING,
+    MISSED,
+    REJECTED,
+    BLOCKED,
+    UNKNOWN
+}
+
+enum class SecurityTag {
+    TRUSTED,
+    UNKNOWN,
+    SUSPICIOUS,
+    SPAM,
+    BLOCKED
+}
+
+enum class CallTab(val displayName: String) {
+    All("All"),
+    Recent("Recent"),
+    Contacts("Contacts"),
+    Blocked("Blocked"),
+    Spam("Spam")
+}
+
+enum class PageIndex {
+    Calls,
+    Messages,
+    Emails
 }
 
 data class BlockedNumber(

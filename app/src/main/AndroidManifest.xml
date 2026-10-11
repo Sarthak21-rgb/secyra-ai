@@ -21,6 +21,9 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" />
+    <uses-permission android:name="android.permission.WRITE_SMS" />
+    <uses-permission android:name="android.permission.BROADCAST_SMS" />
     
     <!-- Storage for file analysis -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -41,8 +44,9 @@
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Call Screening permissions -->
+    <uses-permission android:name="android.permission.BIND_CALL_SCREENING_SERVICE" />
 
     <application
         android:name=".SecyraApplication"
@@ -92,26 +96,37 @@
             </intent-filter>
         </activity>
 
-        <!-- Incoming Call Activity for showing answer/reject screen -->
+        <!-- SMS Activity for handling SMS intents -->
         <activity
-            android:name=".feature.calls.IncomingCallActivity"
-            android:exported="true"
-            android:theme="@style/Theme.SecyraAI"
-            android:launchMode="singleTask"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-            </intent-filter>
-        </activity>
-
-        <!-- Message Activity for messaging the caller -->
-        <activity
-            android:name=".feature.calls.MessageActivity"
+            android:name=".feature.messages.SmsActivity"
             android:exported="true"
             android:theme="@style/Theme.SecyraAI"
             android:launchMode="singleTask">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
             </intent-filter>
         </activity>
 
@@ -127,6 +142,30 @@
                 android:name="android.telecom.IN_CALL_SERVICE_UI"
                 android:value="true" />
         </service>
+
+        <!-- CallScreeningService for caller ID and spam detection -->
+        <service
+            android:name=".core.telecom.SecyraCallScreeningService"
+            android:exported="true"
+            android:permission="android.permission.BIND_CALL_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+
+        <!-- SMS Receiver for receiving SMS messages -->
+        <receiver
+            android:name=".feature.messages.SmsReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="1000">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                <action android:name="android.provider.Telephony.SMS_DELIVER" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+            </intent-filter>
+        </receiver>
 
         <!-- ConnectionService for handling outgoing calls -->
         <!-- Temporarily disabled due to API compatibility issues -->

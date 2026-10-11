@@ -13,6 +13,7 @@ val AzureBlue = Color(0xFF007FFF) // Primary Azure
 val SecyraBackground = Color(0xFF000000) // Pure black background
 val SecyraSurface = Color(0xFF071018) // Dark blue-black card background
 val SecyraSurfaceElevated = Color(0xFF0A151D) // Secondary dark surface
+val SecyraElevatedSurface = Color(0xFF0A151D) // Secondary dark surface (alias)
 val SecyraDarkBlue = Color(0xFF0A1A2E) // Dark blue for buttons
 
 // Border Colors - Exact match from specification

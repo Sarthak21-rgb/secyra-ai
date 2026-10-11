@@ -23,60 +23,7 @@ class ContactRepository @Inject constructor(
 ) {
 
     @SuppressLint("Range")
-    suspend fun getAllContacts(): List<Contact> = withContext(Dispatchers.IO) {
-        if (!permissionManager.isPermissionGranted(com.secyra.ai.core.permissions.PermissionManager.Permissions.READ_CONTACTS)) {
-            return@withContext emptyList()
-        }
-
-        val contacts = mutableListOf<Contact>()
-
-        val projection = arrayOf(
-            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-            ContactsContract.CommonDataKinds.Phone.NUMBER,
-            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
-        )
-
-        val sortOrder = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC"
-
-        val cursor: Cursor? = context.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            projection,
-            null,
-            null,
-            sortOrder
-        )
-
-        cursor?.use {
-            val idIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
-            val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-            val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-            val photoUriIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
-
-            while (it.moveToNext()) {
-                val id = it.getString(idIndex)
-                val name = it.getString(nameIndex) ?: "Unknown"
-                val number = it.getString(numberIndex) ?: ""
-                val photoUri = it.getString(photoUriIndex)
-
-                if (number.isNotEmpty()) {
-                    contacts.add(
-                        Contact(
-                            id = id,
-                            name = name,
-                            phoneNumber = number,
-                            photoUri = photoUri
-                        )
-                    )
-                }
-            }
-        }
-
-        contacts
-    }
-
-    @SuppressLint("Range")
-    suspend fun searchContacts(query: String): List<Contact> = withContext(Dispatchers.IO) {
+    suspend fun searchContacts(query: String, limit: Int = 20): List<Contact> = withContext(Dispatchers.IO) {
         if (!permissionManager.isPermissionGranted(com.secyra.ai.core.permissions.PermissionManager.Permissions.READ_CONTACTS)) {
             return@withContext emptyList()
         }
@@ -112,7 +59,8 @@ class ContactRepository @Inject constructor(
             val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             val photoUriIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
 
-            while (it.moveToNext()) {
+            var count = 0
+            while (it.moveToNext() && count < limit) {
                 val id = it.getString(idIndex)
                 val name = it.getString(nameIndex) ?: "Unknown"
                 val number = it.getString(numberIndex) ?: ""
@@ -127,6 +75,7 @@ class ContactRepository @Inject constructor(
                             photoUri = photoUri
                         )
                     )
+                    count++
                 }
             }
         }

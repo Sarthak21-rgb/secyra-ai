@@ -21,10 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -72,7 +69,7 @@ fun HomeScreen(
         modifier = modifier
             .fillMaxSize()
             .background(SecyraBackground)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 120.dp) // Space for bottom nav + system nav
     ) {
@@ -151,45 +148,37 @@ fun SecyraHeader(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // SECYRA shield logo (using vector drawable)
+            // SECYRA shield logo
             Icon(
-                painter = painterResource(R.drawable.ic_shield_logo_large),
-                contentDescription = "SECYRA Shield",
-                tint = TiffanyBlue,
-                modifier = Modifier.size(36.dp)
+                painter = painterResource(R.drawable.shield_logo),
+                contentDescription = "SECYRA AI",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(44.dp)
             )
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "SECYRA",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = SecyraWhite,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                    Text(
-                        text = "AI",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = TiffanyBlue,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                }
                 Text(
-                    text = "See. Understand. Stay Secure.",
+                    text = "SECYRA",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = SecyraWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+                Text(
+                    text = "AI POWERED SECURITY",
                     style = MaterialTheme.typography.bodySmall,
-                    color = SecyraTextSecondary,
-                    fontSize = 12.sp
+                    color = AzureBlue,
+                    fontSize = 8.sp
                 )
             }
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             // Notifications icon
             IconButton(
                 onClick = onNotificationClick,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Notifications,
@@ -201,7 +190,7 @@ fun SecyraHeader(
             // Profile icon
             IconButton(
                 onClick = onProfileClick,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
@@ -232,20 +221,20 @@ fun TimeAwareGreeting(userName: String) {
             style = MaterialTheme.typography.headlineMedium,
             color = SecyraWhite,
             fontWeight = FontWeight.Bold,
-            fontSize = 28.sp
+            fontSize = 32.sp
         )
         Text(
             text = userName,
             style = MaterialTheme.typography.headlineMedium,
             color = TiffanyBlue,
             fontWeight = FontWeight.Bold,
-            fontSize = 30.sp
+            fontSize = 34.sp
         )
         Text(
             text = "Your security is our priority.",
             style = MaterialTheme.typography.bodyLarge,
             color = SecyraTextSecondary,
-            fontSize = 16.sp
+            fontSize = 18.sp
         )
     }
 }
@@ -259,7 +248,7 @@ fun SecurityStatusCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(155.dp)
+            .height(135.dp)
             .clickable(onClick = onViewSecurityCenter),
         colors = CardDefaults.cardColors(
             containerColor = SecyraSurface
@@ -270,22 +259,22 @@ fun SecurityStatusCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Security Score Ring (LEFT)
             SecurityScoreRing(
                 score = securityScore,
-                modifier = Modifier.size(110.dp)
+                modifier = Modifier.size(100.dp)
             )
-            
-            Spacer(modifier = Modifier.width(24.dp))
-            
+
+            Spacer(modifier = Modifier.width(20.dp))
+
             // Status and Shield (RIGHT)
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
@@ -293,7 +282,7 @@ fun SecurityStatusCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = SecyraTextSecondary,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 18.sp
+                    fontSize = 16.sp
                 )
                 
                 // Shield icon
@@ -461,7 +450,7 @@ fun QuickActionsSection(
                 style = MaterialTheme.typography.titleLarge,
                 color = SecyraWhite,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
+                fontSize = 18.sp
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -471,7 +460,7 @@ fun QuickActionsSection(
                     text = "View all",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TiffanyBlue,
-                    fontSize = 13.sp
+                    fontSize = 14.sp
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
@@ -489,7 +478,7 @@ fun QuickActionsSection(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
+                .height(360.dp)
         ) {
             item {
                 QuickActionCard(
@@ -520,7 +509,7 @@ fun QuickActionsSection(
             }
             item {
                 QuickActionCard(
-                    icon = Icons.Default.Info,
+                    icon = Icons.Default.Email,
                     title = "Check Message",
                     description = "Detect spam & malware",
                     onClick = onCheckMessage,
@@ -542,24 +531,12 @@ fun QuickActionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp)
-            .clickable(onClick = onClick)
-            .drawBehind {
-                drawRoundRect(
-                    color = borderColor.copy(alpha = 0.3f),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(
-                        x = 20.dp.toPx(),
-                        y = 20.dp.toPx()
-                    ),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = 4.dp.toPx()
-                    )
-                )
-            },
+            .height(160.dp)
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = SecyraSurface
         ),
-        border = BorderStroke(2.dp, borderColor),
+        border = BorderStroke(1.5.dp, borderColor),
         shape = RoundedCornerShape(20.dp)
     ) {
         Box {
@@ -572,8 +549,8 @@ fun QuickActionCard(
                 // Icon container
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(borderColor.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -581,25 +558,24 @@ fun QuickActionCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = borderColor,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
-                
+
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = SecyraWhite,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SecyraWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
                 )
-                
+
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = SecyraTextSecondary,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp
                 )
             }
             
@@ -608,8 +584,8 @@ fun QuickActionCard(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(borderColor.copy(alpha = 0.1f))
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
@@ -618,7 +594,7 @@ fun QuickActionCard(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = null,
                     tint = borderColor,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }

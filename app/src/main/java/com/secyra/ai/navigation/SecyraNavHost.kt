@@ -22,6 +22,7 @@ import com.secyra.ai.feature.link.LinkSecurityScreen
 import com.secyra.ai.feature.message.MessageSecurityScreen
 import com.secyra.ai.feature.privacy.PrivacyScreen
 import com.secyra.ai.feature.scan.ScanScreen
+import com.secyra.ai.feature.search.SearchScreen
 import com.secyra.ai.feature.security.SecurityScreen
 import com.secyra.ai.feature.settings.SettingsScreen
 import com.secyra.ai.feature.subscription.ProSubscriptionScreen
@@ -71,7 +72,11 @@ fun SecyraNavHost() {
                 )
             }
             composable(Screen.Calls.route) {
-                CallsScreen()
+                CallsScreen(
+                    onNavigateToSearch = {
+                        navController.navigate(Screen.Search.route)
+                    }
+                )
             }
             composable(Screen.Scan.route) {
                 ScanScreen(
@@ -123,6 +128,11 @@ fun SecyraNavHost() {
             }
             composable(Screen.ActivityHistory.route) {
                 ActivityHistoryPlaceholder()
+            }
+            composable(Screen.Search.route) {
+                SearchScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
