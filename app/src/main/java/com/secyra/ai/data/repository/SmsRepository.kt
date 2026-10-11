@@ -28,7 +28,8 @@ class SmsRepository @Inject constructor(
         val projection = arrayOf(
             Telephony.Sms.Conversations.THREAD_ID,
             Telephony.Sms.Conversations.SNIPPET,
-            Telephony.Sms.Conversations.MESSAGE_COUNT
+            Telephony.Sms.Conversations.MESSAGE_COUNT,
+            Telephony.Sms.Conversations.DATE
         )
 
         val cursor: Cursor? = context.contentResolver.query(
@@ -43,11 +44,13 @@ class SmsRepository @Inject constructor(
             val threadIdIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.THREAD_ID)
             val snippetIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.SNIPPET)
             val messageCountIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.MESSAGE_COUNT)
+            val dateIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.DATE)
 
             while (it.moveToNext()) {
                 val threadId = it.getLong(threadIdIndex)
                 val snippet = it.getString(snippetIndex) ?: ""
                 val messageCount = it.getInt(messageCountIndex)
+                val timestamp = it.getLong(dateIndex)
 
                 // Get address from first message in thread
                 val address = getAddressForThread(threadId)
@@ -61,7 +64,7 @@ class SmsRepository @Inject constructor(
                         address = address,
                         snippet = snippet,
                         messageCount = messageCount,
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = timestamp,
                         unreadCount = unreadCount,
                         isLatestMessageOutgoing = isLatestOutgoing
                     )

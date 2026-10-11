@@ -19,6 +19,8 @@ data class MessageConversation(
     val securityLevel: SecurityLevel,
     val initials: String,
     val unreadCount: Int = 0,
+    val messageCount: Int = 1,
+    val isSavedContact: Boolean = false,
     val isLatestMessageOutgoing: Boolean = false
 ) {
     companion object {
@@ -32,13 +34,15 @@ data class MessageConversation(
 
             return MessageConversation(
                 threadId = conversation.threadId,
-                address = address,
+                address = conversation.address,
                 displayName = address, // TODO: Resolve to contact name
                 snippet = conversation.snippet,
                 timestamp = formatTimestamp(conversation.timestamp),
                 securityLevel = SecurityLevel.Unknown, // TODO: Implement security analysis
                 initials = initials,
                 unreadCount = conversation.unreadCount,
+                messageCount = conversation.messageCount,
+                isSavedContact = false, // TODO: Check if number is in contacts
                 isLatestMessageOutgoing = conversation.isLatestMessageOutgoing
             )
         }

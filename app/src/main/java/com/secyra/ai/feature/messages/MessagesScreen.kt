@@ -15,15 +15,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.secyra.ai.R
 import com.secyra.ai.core.ui.theme.*
 
 @Composable
@@ -32,92 +39,340 @@ fun MessagesScreen(
     viewModel: MessagesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
-    LazyColumn(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(SecyraBackground)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 100.dp)
     ) {
-        // Messages secondary tabs
-        item {
-            MessagesTabRow(
-                selectedTab = uiState.selectedTab,
-                onTabSelected = { viewModel.onTabSelected(it) }
+        // Header
+        MessagesHeader(
+            onSearchClick = { isSearchActive = true },
+            onSettingsClick = { /* TODO: Navigate to settings */ }
+        )
+
+        // Communication Selector
+        CommunicationSelector(
+            selectedOption = CommunicationOption.Messages,
+            onOptionSelected = { /* TODO: Navigate to selected screen */ }
+        )
+
+        // Search Bar (when active)
+        if (isSearchActive) {
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onClear = { searchQuery = ""; isSearchActive = false }
             )
         }
 
-        // Content based on selected tab
-        when (uiState.selectedTab) {
-            MessageTab.All -> {
-                if (uiState.conversations.isEmpty()) {
-                    item {
-                        EmptyState(
-                            message = "No messages yet",
-                            subMessage = "Your messages will appear here"
-                        )
+        // Filter Tabs
+        MessagesTabRow(
+            selectedTab = uiState.selectedTab,
+            onTabSelected = { viewModel.onTabSelected(it) }
+        )
+
+        // Conversation List
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = 0.dp, top = 16.dp, end = 0.dp, bottom = 100.dp)
+        ) {
+            // Content based on selected tab
+            when (uiState.selectedTab) {
+                MessageTab.All -> {
+                    if (uiState.conversations.isEmpty()) {
+                        item {
+                            EmptyState(
+                                message = "No messages yet",
+                                subMessage = "Your messages will appear here"
+                            )
+                        }
+                    } else {
+                        val filteredConversations = if (searchQuery.isNotEmpty()) {
+                            uiState.conversations.filter {
+                                it.displayName.contains(searchQuery, ignoreCase = true) ||
+                                it.snippet.contains(searchQuery, ignoreCase = true)
+                            }
+                        } else {
+                            uiState.conversations
+                        }
+                        
+                        if (filteredConversations.isEmpty() && searchQuery.isNotEmpty()) {
+                            item {
+                                EmptyState(
+                                    message = "No results found",
+                                    subMessage = "Try a different search term"
+                                )
+                            }
+                        } else {
+                            items(filteredConversations) { conversation ->
+                                MessageConversationCard(
+                                    conversation = conversation,
+                                    onClick = { viewModel.onConversationClick(conversation) }
+                                )
+                            }
+                        }
                     }
-                } else {
-                    items(uiState.conversations) { conversation ->
-                        MessageConversationCard(
-                            conversation = conversation,
-                            onClick = { viewModel.onConversationClick(conversation) }
-                        )
+                }
+                MessageTab.Unread -> {
+                    if (uiState.unreadConversations.isEmpty()) {
+                        item {
+                            EmptyState(
+                                message = "No unread messages",
+                                subMessage = "All messages have been read"
+                            )
+                        }
+                    } else {
+                        items(uiState.unreadConversations) { conversation ->
+                            MessageConversationCard(
+                                conversation = conversation,
+                                onClick = { viewModel.onConversationClick(conversation) }
+                            )
+                        }
+                    }
+                }
+                MessageTab.Suspicious -> {
+                    if (uiState.suspiciousConversations.isEmpty()) {
+                        item {
+                            EmptyState(
+                                message = "No suspicious messages",
+                                subMessage = "Secyra hasn't detected any threats"
+                            )
+                        }
+                    } else {
+                        items(uiState.suspiciousConversations) { conversation ->
+                            MessageConversationCard(
+                                conversation = conversation,
+                                onClick = { viewModel.onConversationClick(conversation) }
+                            )
+                        }
+                    }
+                }
+                MessageTab.Blocked -> {
+                    if (uiState.blockedConversations.isEmpty()) {
+                        item {
+                            EmptyState(
+                                message = "No blocked senders",
+                                subMessage = "Blocked messages will appear here"
+                            )
+                        }
+                    } else {
+                        items(uiState.blockedConversations) { conversation ->
+                            MessageConversationCard(
+                                conversation = conversation,
+                                onClick = { viewModel.onConversationClick(conversation) }
+                            )
+                        }
                     }
                 }
             }
-            MessageTab.Unread -> {
-                if (uiState.unreadConversations.isEmpty()) {
-                    item {
-                        EmptyState(
-                            message = "No unread messages",
-                            subMessage = "All messages have been read"
-                        )
-                    }
-                } else {
-                    items(uiState.unreadConversations) { conversation ->
-                        MessageConversationCard(
-                            conversation = conversation,
-                            onClick = { viewModel.onConversationClick(conversation) }
-                        )
-                    }
-                }
+        }
+    }
+}
+
+@Composable
+fun MessagesHeader(
+    onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.drawable.shield_logo),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = "SECYRA",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = SecyraWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = "AI POWERED SECURITY",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecyraTextMuted,
+                    fontSize = 12.sp
+                )
             }
-            MessageTab.Suspicious -> {
-                if (uiState.suspiciousConversations.isEmpty()) {
-                    item {
-                        EmptyState(
-                            message = "No suspicious messages",
-                            subMessage = "Secyra hasn't detected any threats"
-                        )
-                    }
-                } else {
-                    items(uiState.suspiciousConversations) { conversation ->
-                        MessageConversationCard(
-                            conversation = conversation,
-                            onClick = { viewModel.onConversationClick(conversation) }
-                        )
-                    }
-                }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = AzureBlue,
+                    modifier = Modifier.size(24.dp)
+                )
             }
-            MessageTab.Blocked -> {
-                if (uiState.blockedConversations.isEmpty()) {
-                    item {
-                        EmptyState(
-                            message = "No blocked senders",
-                            subMessage = "Blocked messages will appear here"
-                        )
-                    }
-                } else {
-                    items(uiState.blockedConversations) { conversation ->
-                        MessageConversationCard(
-                            conversation = conversation,
-                            onClick = { viewModel.onConversationClick(conversation) }
-                        )
-                    }
-                }
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = TiffanyBlue,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+enum class CommunicationOption(val displayName: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Calls("Calls", Icons.Default.Phone),
+    Messages("Messages", Icons.Default.Message),
+    Emails("Emails", Icons.Default.Email)
+}
+
+@Composable
+fun CommunicationSelector(
+    selectedOption: CommunicationOption,
+    onOptionSelected: (CommunicationOption) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .height(48.dp)
+            .background(
+                Color(0xFF080D12),
+                RoundedCornerShape(24.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color(0xFF17212D),
+                shape = RoundedCornerShape(24.dp)
+            ),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        CommunicationOption.values().forEach { option ->
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onOptionSelected(option) }
+                    .then(
+                        if (selectedOption == option) {
+                            Modifier.background(
+                                TiffanyBlue.copy(alpha = 0.15f),
+                                RoundedCornerShape(24.dp)
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .border(
+                        width = if (selectedOption == option) 1.dp else 0.dp,
+                        color = TiffanyBlue,
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = option.icon,
+                    contentDescription = null,
+                    tint = if (selectedOption == option) TiffanyBlue else SecyraTextMuted,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = option.displayName,
+                    color = if (selectedOption == option) TiffanyBlue else SecyraTextMuted,
+                    fontSize = 14.sp,
+                    fontWeight = if (selectedOption == option) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .height(48.dp)
+            .background(Color(0xFF080D12), RoundedCornerShape(24.dp))
+            .border(
+                width = 1.dp,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(AzureBlue, TiffanyBlue)
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = SecyraTextMuted,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.weight(1f),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = SecyraWhite,
+                focusedTextColor = SecyraWhite,
+                unfocusedTextColor = SecyraWhite
+            ),
+            placeholder = {
+                Text(
+                    text = "Search messages...",
+                    color = SecyraTextMuted,
+                    fontSize = 14.sp
+                )
+            },
+            textStyle = androidx.compose.ui.text.TextStyle(
+                color = SecyraWhite,
+                fontSize = 14.sp
+            ),
+            singleLine = true
+        )
+        if (query.isNotEmpty()) {
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Clear,
+                    contentDescription = "Clear",
+                    tint = SecyraTextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -128,35 +383,47 @@ fun MessagesTabRow(
     selectedTab: MessageTab,
     onTabSelected: (MessageTab) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        MessageTab.values().forEach { tab ->
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onTabSelected(tab) }
-                    .padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = tab.displayName,
-                    color = if (selectedTab == tab) TiffanyBlue else SecyraTextMuted,
-                    fontSize = 15.sp,
-                    fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Normal
-                )
-                if (selectedTab == tab) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .width(30.dp)
-                            .height(3.dp)
-                            .background(TiffanyBlue)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            MessageTab.values().forEach { tab ->
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onTabSelected(tab) }
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = tab.displayName,
+                        color = if (selectedTab == tab) TiffanyBlue else SecyraTextMuted,
+                        fontSize = 14.sp,
+                        fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Normal
                     )
+                    if (selectedTab == tab) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(20.dp)
+                                .height(2.dp)
+                                .background(TiffanyBlue)
+                        )
+                    }
                 }
             }
         }
+        // Full-width divider
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(1.dp)
+                .background(Color(0xFF17212D))
+        )
     }
 }
 
@@ -168,12 +435,13 @@ fun MessageConversationCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .height(114.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF080D12)
+            containerColor = Color(0xFF03080E)
         ),
-        border = BorderStroke(1.dp, Color(0xFF18232D))
+        border = BorderStroke(1.dp, Color(0xFF17212D))
     ) {
         Row(
             modifier = Modifier
@@ -185,7 +453,7 @@ fun MessageConversationCard(
             // Avatar
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(SecyraSurfaceElevated),
                 contentAlignment = Alignment.Center
@@ -193,22 +461,64 @@ fun MessageConversationCard(
                 Text(
                     text = conversation.initials,
                     color = SecyraWhite,
-                    fontSize = 22.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
 
-            // Name and message preview
+            // Middle section: Name row and message preview
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = conversation.displayName,
-                    color = SecyraWhite,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                // Name row with timestamp and count badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = conversation.displayName,
+                        color = SecyraWhite,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Message count badge (only if > 1)
+                        if (conversation.messageCount > 1) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(TiffanyBlue),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (conversation.messageCount > 9) "9+" else conversation.messageCount.toString(),
+                                    color = Color.Black,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        
+                        // Timestamp
+                        Text(
+                            text = conversation.timestamp,
+                            color = Color(0xFF77869B),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                
+                // Message preview
                 val displaySnippet = if (conversation.isLatestMessageOutgoing) {
                     "You: ${conversation.snippet}"
                 } else {
@@ -218,50 +528,28 @@ fun MessageConversationCard(
                     text = displaySnippet,
                     color = Color(0xFFA9B8CC),
                     fontSize = 14.sp,
-                    maxLines = 2
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Right column: timestamp, security badge, unread count, arrow
+            // Right section: Security pill and chevron
             Column(
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = conversation.timestamp,
-                    color = Color(0xFF77869B),
-                    fontSize = 13.sp
-                )
-                MessageSecurityChip(securityLevel = conversation.securityLevel)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Unread count badge
-                    if (conversation.unreadCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(TiffanyBlue),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (conversation.unreadCount > 9) "9+" else conversation.unreadCount.toString(),
-                                color = SecyraWhite,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                    // Chevron arrow
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = Color(0xFF77869B),
-                        modifier = Modifier.size(20.dp)
-                    )
+                // Security pill (only for non-saved contacts)
+                if (!conversation.isSavedContact) {
+                    MessageSecurityChip(securityLevel = conversation.securityLevel)
                 }
+                
+                // Chevron arrow
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color(0xFF77869B),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -276,8 +564,8 @@ fun MessageSecurityChip(securityLevel: SecurityLevel) {
             Icons.Default.Shield
         )
         SecurityLevel.Unknown -> Triple(
-            SecyraSurfaceElevated,
-            SecyraTextMuted,
+            Color(0xFF1A2530),
+            Color(0xFF6B9DBD),
             Icons.Default.Help
         )
         SecurityLevel.Suspicious -> Triple(
@@ -294,13 +582,13 @@ fun MessageSecurityChip(securityLevel: SecurityLevel) {
 
     Row(
         modifier = Modifier
-            .height(36.dp)
+            .height(32.dp)
             .border(
                 width = 1.dp,
                 color = textColor.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(16.dp)
             )
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -308,12 +596,12 @@ fun MessageSecurityChip(securityLevel: SecurityLevel) {
             imageVector = icon,
             contentDescription = null,
             tint = textColor,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(12.dp)
         )
         Text(
             text = securityLevel.displayName,
             color = textColor,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium
         )
     }
@@ -327,7 +615,7 @@ fun EmptyState(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 40.dp),
+            .padding(vertical = 60.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(

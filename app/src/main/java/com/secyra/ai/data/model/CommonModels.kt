@@ -37,7 +37,10 @@ data class SmsConversation(
     val contactName: String?,
     val snippet: String,
     val date: Long,
+    val timestamp: Long,
     val unreadCount: Int,
+    val messageCount: Int,
+    val isLatestMessageOutgoing: Boolean,
     val securityStatus: SecurityStatus = SecurityStatus.UNKNOWN
 )
 
