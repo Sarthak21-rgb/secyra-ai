@@ -4,7 +4,7 @@ import java.util.Locale
 
 /**
  * Service for grouping call log records according to production-quality rules.
- * Implements 23-hour rolling window grouping with phone number normalization.
+ * Implements 7-hour rolling window grouping with phone number normalization.
  */
 class CallGroupingService(
     private val config: CallGroupingConfig = CallGroupingConfig(),
@@ -28,8 +28,8 @@ class CallGroupingService(
     /**
      * Groups raw call records according to the defined rules:
      * 1. Group by normalized phone number
-     * 2. Use 23-hour rolling window
-     * 3. Preserve groups after gaps > 23 hours
+     * 2. Use 7-hour rolling window
+     * 3. Preserve groups after gaps > 7 hours
      * 4. Combine incoming and outgoing calls in same group
      * 5. Show latest call (can be incoming or outgoing) as group representative
      * 6. Track total and missed counts separately
@@ -70,9 +70,9 @@ class CallGroupingService(
     /**
      * Groups calls for a single phone number.
      * - Combine incoming and outgoing calls in same group
-     * - Use 23-hour rolling window for time-based grouping
+     * - Use 7-hour rolling window for time-based grouping
      * - Show latest call (incoming or outgoing) as group representative
-     * - Missed calls are grouped separately with 23-hour window until user calls back
+     * - Missed calls are grouped separately with 7-hour window until user calls back
      */
     private fun groupCallsByNumber(calls: List<RawCallRecord>, phoneNumber: String): List<CallGroup> {
         if (calls.isEmpty()) return emptyList()
@@ -125,7 +125,7 @@ class CallGroupingService(
     }
 
     /**
-     * Groups calls of the same type using 23-hour rolling window.
+     * Groups calls of the same type using 7-hour rolling window.
      */
     private fun groupCallsByType(calls: List<RawCallRecord>): List<CallGroup> {
         if (calls.isEmpty()) return emptyList()
@@ -144,10 +144,10 @@ class CallGroupingService(
                 val timeGap = call.timestampMillis - newestCallInGroup.timestampMillis
 
                 if (timeGap <= config.groupingWindowMillis) {
-                    // Within 23-hour window - add to current group
+                    // Within 7-hour window - add to current group
                     currentGroupCalls.add(call)
                 } else {
-                    // Gap exceeds 23 hours - finalize current group and start new one
+                    // Gap exceeds 7 hours - finalize current group and start new one
                     if (currentGroupCalls.isNotEmpty()) {
                         groups.add(createGroup(currentGroupCalls))
                     }
