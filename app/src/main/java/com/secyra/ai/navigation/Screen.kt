@@ -17,4 +17,6 @@ sealed class Screen(val route: String) {
     object AllActions : Screen("all_actions")
     object ActivityHistory : Screen("activity_history")
     object Search : Screen("search")
+    object IncomingCall : Screen("incoming_call")
+    object ActiveCall : Screen("active_call")
 }

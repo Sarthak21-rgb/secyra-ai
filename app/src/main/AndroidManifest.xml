@@ -44,6 +44,7 @@
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
 
     <!-- Call Screening permissions -->
     <uses-permission android:name="android.permission.BIND_CALL_SCREENING_SERVICE" />
@@ -91,6 +92,20 @@
             android:theme="@style/Theme.SecyraAI"
             android:launchMode="singleTask"
             android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <!-- Incoming Call Activity for displaying incoming call UI -->
+        <activity
+            android:name=".feature.calls.IncomingCallActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SecyraAI"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
