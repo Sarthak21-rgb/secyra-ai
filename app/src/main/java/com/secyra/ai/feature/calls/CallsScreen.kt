@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import java.util.Calendar as JavaCalendar
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -978,18 +979,18 @@ private fun getContactColor(name: String?, phoneNumber: String): Color {
 // Helper function to format timestamp
 private fun formatTimestamp(timestampMillis: Long): String {
     val now = System.currentTimeMillis()
-    val calendarNow = java.util.Calendar.getInstance()
-    val calendarCall = java.util.Calendar.getInstance()
+    val calendarNow = JavaCalendar.getInstance()
+    val calendarCall = JavaCalendar.getInstance()
     calendarCall.timeInMillis = timestampMillis
 
     // Check if same day (midnight to midnight)
-    val isSameDay = calendarNow.get(java.util.Calendar.YEAR) == calendarCall.get(java.util.Calendar.YEAR) &&
-                    calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarCall.get(java.util.Calendar.DAY_OF_YEAR)
+    val isSameDay = calendarNow.get(JavaCalendar.YEAR) == calendarCall.get(JavaCalendar.YEAR) &&
+                    calendarNow.get(JavaCalendar.DAY_OF_YEAR) == calendarCall.get(JavaCalendar.DAY_OF_YEAR)
 
     // Check if yesterday
-    calendarNow.add(java.util.Calendar.DAY_OF_YEAR, -1)
-    val isYesterday = calendarNow.get(java.util.Calendar.YEAR) == calendarCall.get(java.util.Calendar.YEAR) &&
-                     calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarCall.get(java.util.Calendar.DAY_OF_YEAR)
+    calendarNow.add(JavaCalendar.DAY_OF_YEAR, -1)
+    val isYesterday = calendarNow.get(JavaCalendar.YEAR) == calendarCall.get(JavaCalendar.YEAR) &&
+                     calendarNow.get(JavaCalendar.DAY_OF_YEAR) == calendarCall.get(JavaCalendar.DAY_OF_YEAR)
 
     val date = java.util.Date(timestampMillis)
     val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())

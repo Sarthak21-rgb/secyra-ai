@@ -1,6 +1,7 @@
 package com.secyra.ai.core.telecom
 
 import java.util.Locale
+import java.util.Calendar as JavaCalendar
 
 /**
  * Service for grouping call log records according to production-quality rules.
@@ -148,13 +149,13 @@ class CallGroupingService(
                 val timeGap = call.timestampMillis - newestCallInWindow.timestampMillis
 
                 // Also check if crossing day boundary (midnight)
-                val callCalendar = java.util.Calendar.getInstance()
+                val callCalendar = JavaCalendar.getInstance()
                 callCalendar.timeInMillis = call.timestampMillis
-                val newestCalendar = java.util.Calendar.getInstance()
+                val newestCalendar = JavaCalendar.getInstance()
                 newestCalendar.timeInMillis = newestCallInWindow.timestampMillis
                 
-                val isDifferentDay = callCalendar.get(java.util.Calendar.DAY_OF_YEAR) != newestCalendar.get(java.util.Calendar.DAY_OF_YEAR) ||
-                                       callCalendar.get(java.util.Calendar.YEAR) != newestCalendar.get(java.util.Calendar.YEAR)
+                val isDifferentDay = callCalendar.get(JavaCalendar.DAY_OF_YEAR) != newestCalendar.get(JavaCalendar.DAY_OF_YEAR) ||
+                                       callCalendar.get(JavaCalendar.YEAR) != newestCalendar.get(JavaCalendar.YEAR)
 
                 if (timeGap <= config.groupingWindowMillis && !isDifferentDay) {
                     // Within 7-hour window and same day - add to current window
