@@ -68,7 +68,7 @@ fun MessagesScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(start = 0.dp, top = 16.dp, end = 0.dp, bottom = 100.dp)
+            contentPadding = PaddingValues(start = 0.dp, top = 8.dp, end = 0.dp, bottom = 100.dp)
         ) {
             // Content based on selected tab
             when (uiState.selectedTab) {
@@ -306,7 +306,7 @@ fun MessagesTabRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             MessageTab.values().forEach { tab ->
@@ -314,7 +314,7 @@ fun MessagesTabRow(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onTabSelected(tab) }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -324,7 +324,7 @@ fun MessagesTabRow(
                         fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Normal
                     )
                     if (selectedTab == tab) {
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
                                 .width(20.dp)

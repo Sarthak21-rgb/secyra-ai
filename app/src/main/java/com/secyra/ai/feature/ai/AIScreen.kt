@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -164,92 +165,100 @@ fun AIAssistantHomeScreen(
     attachments: List<String>,
     onRemoveAttachment: (Int) -> Unit
 ) {
+    var isInputFocused by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    
     Box(modifier = Modifier.fillMaxSize()) {
         if (showChat) {
             // Chat view
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(SecyraBackground)
+                    .background(SecyraBackground),
             ) {
-                // Chat messages
-                if (uiState.messages.isEmpty()) {
-                    // Welcome state with suggested prompts
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f)
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(24.dp)
+                // Chat messages (hide when input is focused)
+                if (!isInputFocused) {
+                    if (uiState.messages.isEmpty()) {
+                        // Welcome state with suggested prompts
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f)
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Your security. Your intelligence.",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = SecyraWhite,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Ask anything, understand risks, and make safer decisions with Secyra AI.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = SecyraTextSecondary,
-                                fontSize = 16.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            // Suggested prompts
                             Column(
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(24.dp)
                             ) {
-                                SuggestedPrompt(
-                                    text = "Is this message a scam?",
-                                    onClick = { onInputChange("Is this message a scam?") }
+                                Text(
+                                    text = "Your security. Your intelligence.",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = SecyraWhite,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp,
+                                    textAlign = TextAlign.Center
                                 )
-                                SuggestedPrompt(
-                                    text = "Explain this suspicious link",
-                                    onClick = { onInputChange("Explain this suspicious link") }
+                                Text(
+                                    text = "Ask anything, understand risks, and make safer decisions with Secyra AI.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = SecyraTextSecondary,
+                                    fontSize = 16.sp,
+                                    textAlign = TextAlign.Center
                                 )
-                                SuggestedPrompt(
-                                    text = "How can I secure my phone?",
-                                    onClick = { onInputChange("How can I secure my phone?") }
-                                )
-                                SuggestedPrompt(
-                                    text = "Help me understand this screen",
-                                    onClick = { onInputChange("Help me understand this screen") }
-                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                // Suggested prompts
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    SuggestedPrompt(
+                                        text = "Is this message a scam?",
+                                        onClick = { onInputChange("Is this message a scam?") }
+                                    )
+                                    SuggestedPrompt(
+                                        text = "Explain this suspicious link",
+                                        onClick = { onInputChange("Explain this suspicious link") }
+                                    )
+                                    SuggestedPrompt(
+                                        text = "How can I secure my phone?",
+                                        onClick = { onInputChange("How can I secure my phone?") }
+                                    )
+                                    SuggestedPrompt(
+                                        text = "Help me understand this screen",
+                                        onClick = { onInputChange("Help me understand this screen") }
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        val listState = rememberLazyListState()
+                        
+                        // Auto-scroll to bottom when new message arrives
+                        LaunchedEffect(uiState.messages.size) {
+                            if (uiState.messages.isNotEmpty()) {
+                                listState.animateScrollToItem(uiState.messages.size - 1)
+                            }
+                        }
+                        
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f)
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(uiState.messages) { message ->
+                                ChatMessageItem(message)
                             }
                         }
                     }
                 } else {
-                    val listState = rememberLazyListState()
-                    
-                    // Auto-scroll to bottom when new message arrives
-                    LaunchedEffect(uiState.messages.size) {
-                        if (uiState.messages.isNotEmpty()) {
-                            listState.animateScrollToItem(uiState.messages.size - 1)
-                        }
-                    }
-                    
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(uiState.messages) { message ->
-                            ChatMessageItem(message)
-                        }
-                    }
+                    // Spacer when input is focused to push composer to bottom
+                    Spacer(modifier = Modifier.weight(1f))
                 }
 
                 // Error message
@@ -315,7 +324,8 @@ fun AIAssistantHomeScreen(
                         onAddAttachment = onAddAttachment,
                         onStartVoiceInput = onStartVoiceInput,
                         onStopVoiceInput = onStopVoiceInput,
-                        isRecording = isRecording
+                        isRecording = isRecording,
+                        onFocusChange = { isInputFocused = it }
                     )
                 }
             }
@@ -610,18 +620,28 @@ fun ChatComposer(
     onAddAttachment: () -> Unit,
     onStartVoiceInput: () -> Unit,
     onStopVoiceInput: () -> Unit,
-    isRecording: Boolean
+    isRecording: Boolean,
+    onFocusChange: (Boolean) -> Unit = {}
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     var text by remember { mutableStateOf(inputText) }
+    var isFocused by remember { mutableStateOf(false) }
     
     LaunchedEffect(inputText) {
         text = inputText
     }
     
+    LaunchedEffect(isFocused) {
+        onFocusChange(isFocused)
+    }
+    
+    val containerHeight = if (isFocused) 160.dp else 72.dp
+    val inputHeight = if (isFocused) 120.dp else 48.dp
+    
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .height(containerHeight)
             .background(Color(0xFF030A12), RoundedCornerShape(36.dp))
             .border(
                 width = 1.dp,
@@ -649,7 +669,10 @@ fun ChatComposer(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 80.dp, max = 200.dp),
+                .height(inputHeight)
+                .onFocusChanged { focusState ->
+                    isFocused = focusState.isFocused
+                },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -662,7 +685,8 @@ fun ChatComposer(
                 color = SecyraWhite,
                 fontSize = 15.sp
             ),
-            maxLines = 6
+            maxLines = if (isFocused) 6 else 1,
+            singleLine = !isFocused
         )
         
         // Bottom controls row

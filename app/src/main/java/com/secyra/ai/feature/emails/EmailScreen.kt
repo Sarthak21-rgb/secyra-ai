@@ -54,16 +54,8 @@ fun EmailScreen(
                     color = TiffanyBlue
                 )
             }
-            !uiState.hasPermission -> {
-                PermissionRequestContent(
-                    onRequestPermission = { viewModel.onRequestPermission() }
-                )
-            }
-            !uiState.isEmailIntegrationAvailable -> {
-                EmailNotAvailableContent()
-            }
             !uiState.isAccountConnected && !showConnectionForm -> {
-                // Empty state with feature card
+                // Empty state with feature card (show by default)
                 EmailEmptyState(
                     onAddAccount = { showConnectionForm = true }
                 )
