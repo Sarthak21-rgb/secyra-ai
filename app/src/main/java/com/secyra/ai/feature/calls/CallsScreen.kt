@@ -107,6 +107,7 @@ fun CallsScreen(
     ) {
         // SECYRA Header
         SecyraCallsHeader(
+            selectedPage = uiState.selectedPage,
             onSearchClick = { onNavigateToSearch() },
             onMenuClick = { }
         )
@@ -386,6 +387,7 @@ fun DefaultPhoneAppBanner(
 
 @Composable
 fun SecyraCallsHeader(
+    selectedPage: PageIndex,
     onSearchClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
@@ -456,7 +458,11 @@ fun SecyraCallsHeader(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Search calls...",
+                    text = when (selectedPage) {
+                        PageIndex.Calls -> "Search calls..."
+                        PageIndex.Messages -> "Search messages..."
+                        PageIndex.Emails -> "Search emails..."
+                    },
                     color = Color(0xFFA0A0A0),
                     fontSize = 14.sp
                 )
@@ -531,17 +537,12 @@ fun SegmentedButton(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = if (selected) {
-        Color(0xFF81D8D0).copy(alpha = 0.2f) // 80% Transparent Tiffany Blue
+        Color.Transparent
     } else {
         Color.Transparent
     }
     val textColor = if (selected) SecyraWhite else Color(0xFF707070)
-    val iconColor = if (selected) Color(0xFF81D8D0) else Color(0xFF707070)
-    val borderColor = if (selected) {
-        Color(0xFF81D8D0) // Opaque Tiffany Blue
-    } else {
-        Color.Transparent
-    }
+    val iconColor = if (selected) AzureBlue else Color(0xFF707070)
 
     Box(
         modifier = modifier
@@ -556,7 +557,9 @@ fun SegmentedButton(
                         )
                         .border(
                             width = 2.dp,
-                            color = borderColor,
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(AzureBlue, TiffanyBlue)
+                            ),
                             shape = RoundedCornerShape(27.dp)
                         )
                 } else {
