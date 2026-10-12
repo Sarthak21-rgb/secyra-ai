@@ -111,6 +111,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Caller Info Activity for displaying caller details -->
+        <activity
+            android:name=".feature.calls.CallerInfoActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SecyraAI"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
         <!-- SMS Activity for handling SMS intents -->
         <activity
             android:name=".feature.messages.SmsActivity"
@@ -191,6 +203,7 @@
                 <action android:name="com.secyra.ai.ACTION_ANSWER" />
                 <action android:name="com.secyra.ai.ACTION_DECLINE" />
                 <action android:name="com.secyra.ai.ACTION_MESSAGE" />
+                <action android:name="com.secyra.ai.ACTION_CALLER_INFO" />
             </intent-filter>
         </receiver>
 

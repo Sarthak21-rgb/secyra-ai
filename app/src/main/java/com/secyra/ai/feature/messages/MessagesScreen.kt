@@ -53,12 +53,6 @@ fun MessagesScreen(
             onSettingsClick = { /* TODO: Navigate to settings */ }
         )
 
-        // Communication Selector
-        CommunicationSelector(
-            selectedOption = CommunicationOption.Messages,
-            onOptionSelected = { /* TODO: Navigate to selected screen */ }
-        )
-
         // Search Bar (when active)
         if (isSearchActive) {
             SearchBar(
@@ -231,75 +225,6 @@ fun MessagesHeader(
                     contentDescription = "Settings",
                     tint = TiffanyBlue,
                     modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    }
-}
-
-enum class CommunicationOption(val displayName: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Calls("Calls", Icons.Default.Phone),
-    Messages("Messages", Icons.Default.Message),
-    Emails("Emails", Icons.Default.Email)
-}
-
-@Composable
-fun CommunicationSelector(
-    selectedOption: CommunicationOption,
-    onOptionSelected: (CommunicationOption) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .height(48.dp)
-            .background(
-                Color(0xFF080D12),
-                RoundedCornerShape(24.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = Color(0xFF17212D),
-                shape = RoundedCornerShape(24.dp)
-            ),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        CommunicationOption.values().forEach { option ->
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onOptionSelected(option) }
-                    .then(
-                        if (selectedOption == option) {
-                            Modifier.background(
-                                TiffanyBlue.copy(alpha = 0.15f),
-                                RoundedCornerShape(24.dp)
-                            )
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .border(
-                        width = if (selectedOption == option) 1.dp else 0.dp,
-                        color = TiffanyBlue,
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = option.icon,
-                    contentDescription = null,
-                    tint = if (selectedOption == option) TiffanyBlue else SecyraTextMuted,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = option.displayName,
-                    color = if (selectedOption == option) TiffanyBlue else SecyraTextMuted,
-                    fontSize = 14.sp,
-                    fontWeight = if (selectedOption == option) FontWeight.SemiBold else FontWeight.Normal
                 )
             }
         }

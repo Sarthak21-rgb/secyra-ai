@@ -39,6 +39,7 @@ class CallNotificationManager @Inject constructor(
         const val ACTION_ANSWER = "com.secyra.ai.ACTION_ANSWER"
         const val ACTION_DECLINE = "com.secyra.ai.ACTION_DECLINE"
         const val ACTION_MESSAGE = "com.secyra.ai.ACTION_MESSAGE"
+        const val ACTION_CALLER_INFO = "com.secyra.ai.ACTION_CALLER_INFO"
         
         const val EXTRA_CALLER_NAME = "caller_name"
         const val EXTRA_PHONE_NUMBER = "phone_number"
@@ -89,7 +90,21 @@ class CallNotificationManager @Inject constructor(
         phoneNumber: String,
         riskLevel: String = "Unable to verify"
     ) {
-        // Create full-screen intent for incoming call screen
+        // Create intent for tapping notification body (caller info screen)
+        val callerInfoIntent = Intent(context, CallNotificationReceiver::class.java).apply {
+            action = ACTION_CALLER_INFO
+            putExtra(EXTRA_CALLER_NAME, callerName)
+            putExtra(EXTRA_PHONE_NUMBER, phoneNumber)
+            putExtra(EXTRA_NOTIFICATION_ID, NOTIFICATION_ID_INCOMING_CALL)
+        }
+        val callerInfoPendingIntent = PendingIntent.getBroadcast(
+            context,
+            3,
+            callerInfoIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // Create full-screen intent for incoming call screen (only shown on accept)
         val fullScreenIntent = IncomingCallActivity.createIntent(callerName, phoneNumber).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -149,7 +164,7 @@ class CallNotificationManager @Inject constructor(
                 callerName,
                 phoneNumber,
                 riskLevel,
-                fullScreenPendingIntent,
+                callerInfoPendingIntent,
                 answerPendingIntent,
                 declinePendingIntent,
                 messagePendingIntent
@@ -159,7 +174,7 @@ class CallNotificationManager @Inject constructor(
                 callerName,
                 phoneNumber,
                 riskLevel,
-                fullScreenPendingIntent,
+                callerInfoPendingIntent,
                 answerPendingIntent,
                 declinePendingIntent,
                 messagePendingIntent
@@ -177,13 +192,14 @@ class CallNotificationManager @Inject constructor(
         callerName: String,
         phoneNumber: String,
         riskLevel: String,
-        fullScreenIntent: PendingIntent,
+        callerInfoIntent: PendingIntent,
         answerPendingIntent: PendingIntent,
         declinePendingIntent: PendingIntent,
         messagePendingIntent: PendingIntent
     ): Notification {
         val person = Person.Builder()
             .setName(callerName)
+            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_launcher_foreground))
             .build()
 
         val callStyle = NotificationCompat.CallStyle.forIncomingCall(
@@ -196,11 +212,11 @@ class CallNotificationManager @Inject constructor(
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setFullScreenIntent(fullScreenIntent, true)
             .setStyle(callStyle)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Incoming Call")
             .setContentText(phoneNumber)
+            .setContentIntent(callerInfoIntent)
             .setAutoCancel(false)
             .addAction(
                 android.R.drawable.ic_menu_send,
@@ -217,7 +233,7 @@ class CallNotificationManager @Inject constructor(
         callerName: String,
         phoneNumber: String,
         riskLevel: String,
-        fullScreenIntent: PendingIntent,
+        callerInfoIntent: PendingIntent,
         answerPendingIntent: PendingIntent,
         declinePendingIntent: PendingIntent,
         messagePendingIntent: PendingIntent
@@ -226,11 +242,11 @@ class CallNotificationManager @Inject constructor(
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setFullScreenIntent(fullScreenIntent, true)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Incoming Call")
             .setContentText("$callerName - $phoneNumber")
             .setSubText("Risk: $riskLevel")
+            .setContentIntent(callerInfoIntent)
             .setAutoCancel(false)
             .addAction(
                 android.R.drawable.ic_menu_call,

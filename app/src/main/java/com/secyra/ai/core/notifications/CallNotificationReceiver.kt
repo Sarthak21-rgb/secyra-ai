@@ -30,6 +30,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
             ACTION_ANSWER -> handleAnswerCall(context, intent)
             ACTION_DECLINE -> handleDeclineCall(context, intent)
             ACTION_MESSAGE -> handleMessageAction(context, intent)
+            ACTION_CALLER_INFO -> handleCallerInfoAction(context, intent)
         }
     }
 
@@ -106,10 +107,26 @@ class CallNotificationReceiver : BroadcastReceiver() {
         }
     }
 
+    private fun handleCallerInfoAction(context: Context, intent: Intent) {
+        try {
+            val callerName = intent.getStringExtra(EXTRA_CALLER_NAME) ?: "Unknown"
+            val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
+            
+            // Launch caller info screen
+            val infoIntent = com.secyra.ai.feature.calls.CallerInfoActivity.createIntent(callerName, phoneNumber)
+            infoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(infoIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Failed to show caller info", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     companion object {
         const val ACTION_ANSWER = "com.secyra.ai.ACTION_ANSWER"
         const val ACTION_DECLINE = "com.secyra.ai.ACTION_DECLINE"
         const val ACTION_MESSAGE = "com.secyra.ai.ACTION_MESSAGE"
+        const val ACTION_CALLER_INFO = "com.secyra.ai.ACTION_CALLER_INFO"
         
         const val EXTRA_CALLER_NAME = "caller_name"
         const val EXTRA_PHONE_NUMBER = "phone_number"
