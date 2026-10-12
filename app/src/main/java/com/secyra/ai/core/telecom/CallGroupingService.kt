@@ -69,10 +69,9 @@ class CallGroupingService(
 
     /**
      * Groups calls for a single phone number.
-     * - Combine incoming and outgoing calls in same group
-     * - Use 7-hour rolling window for time-based grouping
-     * - Show latest call (incoming or outgoing) as group representative
-     * - Missed calls are grouped separately with 7-hour window until user calls back
+     * - For non-missed calls: Group by 7-hour window, show only latest call (no count)
+     * - For missed calls: Group by 7-hour window until user calls back, show count
+     * - Different 7-hour windows create separate rows
      */
     private fun groupCallsByNumber(calls: List<RawCallRecord>, phoneNumber: String): List<CallGroup> {
         if (calls.isEmpty()) return emptyList()
@@ -83,13 +82,14 @@ class CallGroupingService(
         val missedCalls = calls.filter { it.callType == CallType.MISSED }
         val nonMissedCalls = calls.filter { it.callType != CallType.MISSED }
 
-        // Group non-missed calls (incoming + outgoing combined) with 23-hour window
+        // Group non-missed calls (incoming + outgoing combined) with 7-hour window
+        // Each group shows only the latest call, not a count
         if (nonMissedCalls.isNotEmpty()) {
-            groups.addAll(groupCallsByType(nonMissedCalls))
+            groups.addAll(groupNonMissedCallsByWindow(nonMissedCalls))
         }
 
-        // Group missed calls separately with 23-hour window
-        // Reset grouping if user called back (outgoing call after missed)
+        // Group missed calls separately with 7-hour window
+        // Shows count of missed calls until user calls back
         if (missedCalls.isNotEmpty()) {
             val lastMissedCall = missedCalls.maxByOrNull { it.timestampMillis }
             val hasOutgoingAfterMissed = nonMissedCalls.any { 
@@ -116,12 +116,74 @@ class CallGroupingService(
                     groups.addAll(groupCallsByType(missedAfterCallback))
                 }
             } else {
-                // No callback yet - group all missed calls with 23-hour window
+                // No callback yet - group all missed calls with 7-hour window
                 groups.addAll(groupCallsByType(missedCalls))
             }
         }
 
         return groups
+    }
+
+    /**
+     * Groups non-missed calls by 7-hour window.
+     * Each group contains only the latest call (no count).
+     */
+    private fun groupNonMissedCallsByWindow(calls: List<RawCallRecord>): List<CallGroup> {
+        if (calls.isEmpty()) return emptyList()
+
+        val groups = mutableListOf<CallGroup>()
+        val currentWindowCalls = mutableListOf<RawCallRecord>()
+
+        // Sort chronologically
+        val sortedCalls = calls.sortedBy { it.timestampMillis }
+
+        for (call in sortedCalls) {
+            if (currentWindowCalls.isEmpty()) {
+                // First call starts a new window
+                currentWindowCalls.add(call)
+            } else {
+                // Check if this call is within 7-hour window
+                val newestCallInWindow = currentWindowCalls.maxByOrNull { it.timestampMillis }!!
+                val timeGap = call.timestampMillis - newestCallInWindow.timestampMillis
+
+                if (timeGap <= config.groupingWindowMillis) {
+                    // Within 7-hour window - add to current window
+                    currentWindowCalls.add(call)
+                } else {
+                    // Gap exceeds 7 hours - finalize current window with latest call only
+                    val latestCall = currentWindowCalls.maxByOrNull { it.timestampMillis }!!
+                    groups.add(createSingleCallGroup(latestCall))
+                    currentWindowCalls.clear()
+                    currentWindowCalls.add(call)
+                }
+            }
+        }
+
+        // Don't forget the last window
+        if (currentWindowCalls.isNotEmpty()) {
+            val latestCall = currentWindowCalls.maxByOrNull { it.timestampMillis }!!
+            groups.add(createSingleCallGroup(latestCall))
+        }
+
+        return groups
+    }
+
+    /**
+     * Creates a group for a single call (for non-missed latest calls).
+     */
+    private fun createSingleCallGroup(call: RawCallRecord): CallGroup {
+        return CallGroup(
+            phoneNumber = call.phoneNumber,
+            normalizedNumber = call.normalizedNumber,
+            contactName = call.contactName,
+            contactPhotoUri = call.contactPhotoUri,
+            isSavedContact = call.isSavedContact,
+            totalCallCount = 1,
+            missedCallCount = if (call.callType == CallType.MISSED) 1 else 0,
+            newestCall = call,
+            calls = listOf(call),
+            isBlocked = call.isBlocked
+        )
     }
 
     /**
