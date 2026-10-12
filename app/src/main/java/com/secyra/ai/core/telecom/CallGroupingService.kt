@@ -127,6 +127,7 @@ class CallGroupingService(
     /**
      * Groups non-missed calls by 7-hour window.
      * Each group contains only the latest call (no count).
+     * Uses day boundaries (midnight to midnight) for proper grouping.
      */
     private fun groupNonMissedCallsByWindow(calls: List<RawCallRecord>): List<CallGroup> {
         if (calls.isEmpty()) return emptyList()
@@ -146,11 +147,20 @@ class CallGroupingService(
                 val newestCallInWindow = currentWindowCalls.maxByOrNull { it.timestampMillis }!!
                 val timeGap = call.timestampMillis - newestCallInWindow.timestampMillis
 
-                if (timeGap <= config.groupingWindowMillis) {
-                    // Within 7-hour window - add to current window
+                // Also check if crossing day boundary (midnight)
+                val callCalendar = java.util.Calendar.getInstance()
+                callCalendar.timeInMillis = call.timestampMillis
+                val newestCalendar = java.util.Calendar.getInstance()
+                newestCalendar.timeInMillis = newestCallInWindow.timestampMillis
+                
+                val isDifferentDay = callCalendar.get(java.util.Calendar.DAY_OF_YEAR) != newestCalendar.get(java.util.Calendar.DAY_OF_YEAR) ||
+                                       callCalendar.get(java.util.Calendar.YEAR) != newestCalendar.get(java.util.Calendar.YEAR)
+
+                if (timeGap <= config.groupingWindowMillis && !isDifferentDay) {
+                    // Within 7-hour window and same day - add to current window
                     currentWindowCalls.add(call)
                 } else {
-                    // Gap exceeds 7 hours - finalize current window with latest call only
+                    // Gap exceeds 7 hours or different day - finalize current window with latest call only
                     val latestCall = currentWindowCalls.maxByOrNull { it.timestampMillis }!!
                     groups.add(createSingleCallGroup(latestCall))
                     currentWindowCalls.clear()

@@ -977,26 +977,37 @@ private fun getContactColor(name: String?, phoneNumber: String): Color {
 // Helper function to format timestamp
 private fun formatTimestamp(timestampMillis: Long): String {
     val now = System.currentTimeMillis()
-    val diff = now - timestampMillis
-    val dayInMillis = 24 * 60 * 60 * 1000L
+    val calendarNow = java.util.Calendar.getInstance()
+    val calendarCall = java.util.Calendar.getInstance()
+    calendarCall.timeInMillis = timestampMillis
+
+    // Check if same day (midnight to midnight)
+    val isSameDay = calendarNow.get(java.util.Calendar.YEAR) == calendarCall.get(java.util.Calendar.YEAR) &&
+                    calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarCall.get(java.util.Calendar.DAY_OF_YEAR)
+
+    // Check if yesterday
+    calendarNow.add(java.util.Calendar.DAY_OF_YEAR, -1)
+    val isYesterday = calendarNow.get(java.util.Calendar.YEAR) == calendarCall.get(java.util.Calendar.YEAR) &&
+                     calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarCall.get(java.util.Calendar.DAY_OF_YEAR)
+
+    val date = java.util.Date(timestampMillis)
+    val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+    val timeStr = timeFormat.format(date)
 
     return when {
-        diff < dayInMillis -> {
-            // Today - show time
-            val date = java.util.Date(timestampMillis)
-            val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
-            timeFormat.format(date)
+        isSameDay -> {
+            // Today - show only time
+            timeStr
         }
-        diff < 2 * dayInMillis -> "Yesterday"
-        diff < 7 * dayInMillis -> {
-            val date = java.util.Date(timestampMillis)
-            val dayFormat = java.text.SimpleDateFormat("EEEE", java.util.Locale.getDefault())
-            dayFormat.format(date)
+        isYesterday -> {
+            // Yesterday - show "Yes, time"
+            "Yes, $timeStr"
         }
         else -> {
-            val date = java.util.Date(timestampMillis)
-            val dateFormat = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault())
-            dateFormat.format(date)
+            // Other days - show first 3 letters of day name + time
+            val dayFormat = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
+            val dayStr = dayFormat.format(date).take(3)
+            "$dayStr, $timeStr"
         }
     }
 }
