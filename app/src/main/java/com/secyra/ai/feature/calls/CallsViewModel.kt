@@ -1,5 +1,7 @@
 package com.secyra.ai.feature.calls
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Color
@@ -25,10 +27,12 @@ import com.secyra.ai.data.repository.ContactRepository
 import com.secyra.ai.data.repository.Contact
 import com.secyra.ai.domain.model.RiskLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -39,8 +43,16 @@ class CallsViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val callManager: CallManager,
     private val defaultPhoneRoleManager: DefaultPhoneRoleManager,
-    private val callGroupingService: CallGroupingService
+    private val callGroupingService: CallGroupingService,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private val sharedPrefs = context.getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE)
+    
+    companion object {
+        private const val KEY_LAST_SHOWN_DATE = "last_onboarding_shown_date"
+        private const val KEY_USER_SET_DEFAULT = "user_set_default_phone"
+    }
 
     private val _uiState = MutableStateFlow(CallsUiState())
     val uiState: StateFlow<CallsUiState> = _uiState.asStateFlow()
@@ -69,9 +81,59 @@ class CallsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             isDefaultPhoneApp = defaultPhoneRoleManager.isDefaultPhoneApp.value
         )
+        
+        // Check if we should show onboarding banner
+        _uiState.value = _uiState.value.copy(
+            showOnboardingPrompt = shouldShowOnboardingBanner()
+        )
     }
-
+    
+    private fun shouldShowOnboardingBanner(): Boolean {
+        // Never show if user has already set as default
+        if (sharedPrefs.getBoolean(KEY_USER_SET_DEFAULT, false)) {
+            return false
+        }
+        
+        // Don't show if already default
+        if (defaultPhoneRoleManager.isDefaultPhoneApp.value) {
+            return false
+        }
+        
+        // Check if shown today
+        val lastShownDate = sharedPrefs.getLong(KEY_LAST_SHOWN_DATE, 0)
+        val today = getTodayDate()
+        
+        if (lastShownDate == today) {
+            return false // Already shown today
+        }
+        
+        return true // Show once per day
+    }
+    
+    private fun getTodayDate(): Long {
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
+    }
+    
     fun dismissOnboardingPrompt() {
+        // Record that we showed it today
+        sharedPrefs.edit()
+            .putLong(KEY_LAST_SHOWN_DATE, getTodayDate())
+            .apply()
+        
+        _uiState.value = _uiState.value.copy(showOnboardingPrompt = false)
+    }
+    
+    fun markUserSetDefault() {
+        // Mark that user has set Secyra as default
+        sharedPrefs.edit()
+            .putBoolean(KEY_USER_SET_DEFAULT, true)
+            .apply()
+        
         _uiState.value = _uiState.value.copy(showOnboardingPrompt = false)
     }
 

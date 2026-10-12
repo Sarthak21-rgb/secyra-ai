@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.secyra.ai.core.ui.theme.*
 import com.secyra.ai.feature.ai.AIScreen
 import com.secyra.ai.feature.calls.CallsScreen
@@ -73,12 +74,16 @@ fun SecyraNavHost() {
                 )
             }
             composable(Screen.Calls.route) {
+                val callsViewModel = hiltViewModel<com.secyra.ai.feature.calls.CallsViewModel>()
                 CallsScreen(
                     onNavigateToSearch = {
                         navController.navigate(Screen.Search.route)
                     },
                     onNavigateToOnboarding = {
                         navController.navigate(Screen.DefaultDialerOnboarding.route)
+                    },
+                    onUserSetDefault = {
+                        callsViewModel.markUserSetDefault()
                     }
                 )
             }

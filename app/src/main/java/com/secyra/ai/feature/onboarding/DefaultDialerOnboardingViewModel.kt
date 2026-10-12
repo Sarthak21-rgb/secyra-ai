@@ -1,12 +1,14 @@
 package com.secyra.ai.feature.onboarding
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.secyra.ai.core.telecom.DefaultPhoneRoleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,8 +17,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DefaultDialerOnboardingViewModel @Inject constructor(
-    private val defaultPhoneRoleManager: DefaultPhoneRoleManager
+    private val defaultPhoneRoleManager: DefaultPhoneRoleManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private val sharedPrefs = context.getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE)
+    
+    companion object {
+        private const val KEY_USER_SET_DEFAULT = "user_set_default_phone"
+    }
 
     private val _uiState = MutableStateFlow(DefaultDialerOnboardingUiState())
     val uiState: StateFlow<DefaultDialerOnboardingUiState> = _uiState.asStateFlow()
@@ -71,6 +80,11 @@ class DefaultDialerOnboardingViewModel @Inject constructor(
                     isLoading = false,
                     errorMessage = null
                 )
+                
+                // Mark that user has set as default
+                sharedPrefs.edit()
+                    .putBoolean(KEY_USER_SET_DEFAULT, true)
+                    .apply()
                 
                 // Now request ANSWER_PHONE_CALLS permission
                 _uiState.value = _uiState.value.copy(

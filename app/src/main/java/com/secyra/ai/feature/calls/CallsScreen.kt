@@ -58,7 +58,8 @@ fun CallsScreen(
     modifier: Modifier = Modifier,
     viewModel: CallsViewModel = hiltViewModel(),
     onNavigateToSearch: () -> Unit = {},
-    onNavigateToOnboarding: () -> Unit = {}
+    onNavigateToOnboarding: () -> Unit = {},
+    onUserSetDefault: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -110,9 +111,12 @@ fun CallsScreen(
         )
 
         // Default Phone App Onboarding Banner
-        if (!uiState.isDefaultPhoneApp) {
+        if (!uiState.isDefaultPhoneApp && uiState.showOnboardingPrompt) {
             DefaultPhoneAppBanner(
-                onSetAsDefault = { onNavigateToOnboarding() },
+                onSetAsDefault = { 
+                    onNavigateToOnboarding()
+                    onUserSetDefault()
+                },
                 onDismiss = { viewModel.dismissOnboardingPrompt() }
             )
         }
