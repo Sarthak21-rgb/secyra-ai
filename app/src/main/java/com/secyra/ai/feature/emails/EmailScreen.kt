@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -85,10 +86,10 @@ fun EmailScreen(
                     }
                 )
             }
-            uiState.emails.isEmpty() -> {
+            uiState.isAccountConnected && uiState.emails.isEmpty() -> {
                 EmptyEmailsContent()
             }
-            else -> {
+            uiState.isAccountConnected -> {
                 EmailsListContent(emails = uiState.emails)
             }
         }
@@ -128,12 +129,27 @@ fun EmailEmptyState(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Email,
-                    contentDescription = null,
-                    tint = TiffanyBlue.copy(alpha = 0.6f),
-                    modifier = Modifier.size(48.dp)
-                )
+                Box(
+                    modifier = Modifier.size(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(AzureBlue, TiffanyBlue)
+                                ),
+                                CircleShape
+                            )
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
             
             // + badge
@@ -294,7 +310,9 @@ fun FeatureRow(
             modifier = Modifier
                 .size(44.dp)
                 .background(
-                    TiffanyBlue.copy(alpha = 0.15f),
+                    Brush.horizontalGradient(
+                        colors = listOf(AzureBlue, TiffanyBlue)
+                    ),
                     CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -302,7 +320,7 @@ fun FeatureRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = TiffanyBlue,
+                tint = Color.White,
                 modifier = Modifier.size(22.dp)
             )
         }
