@@ -47,12 +47,6 @@ fun MessagesScreen(
             .fillMaxSize()
             .background(SecyraBackground)
     ) {
-        // Header
-        MessagesHeader(
-            onSearchClick = { isSearchActive = true },
-            onSettingsClick = { /* TODO: Navigate to settings */ }
-        )
-
         // Search Bar (when active)
         if (isSearchActive) {
             SearchBar(
