@@ -61,12 +61,18 @@ class EmailViewModel @Inject constructor(
             loadEmails()
         }
     }
+
+    fun onAccountConnected() {
+        _uiState.value = _uiState.value.copy(isAccountConnected = true)
+        loadEmails()
+    }
 }
 
 data class EmailUiState(
     val emails: List<Email> = emptyList(),
     val isEmailIntegrationAvailable: Boolean = false,
     val hasPermission: Boolean = false,
+    val isAccountConnected: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
     val requestPermission: Boolean = false
