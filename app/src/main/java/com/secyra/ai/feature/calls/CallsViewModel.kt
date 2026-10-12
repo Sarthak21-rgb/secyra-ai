@@ -64,8 +64,15 @@ class CallsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedTab = tab)
     }
 
-    private fun checkDefaultPhoneStatus() {
+    fun checkDefaultPhoneStatus() {
         defaultPhoneRoleManager.checkDefaultPhoneStatus()
+        _uiState.value = _uiState.value.copy(
+            isDefaultPhoneApp = defaultPhoneRoleManager.isDefaultPhoneApp.value
+        )
+    }
+
+    fun dismissOnboardingPrompt() {
+        _uiState.value = _uiState.value.copy(showOnboardingPrompt = false)
     }
 
     private fun loadRecentCalls() {
@@ -417,6 +424,7 @@ data class CallsUiState(
     val callIntent: Intent? = null,
     val isDefaultPhoneApp: Boolean = false,
     val showDefaultPhoneRequest: Boolean = false,
+    val showOnboardingPrompt: Boolean = true,
     val selectedContactForProfile: CallItem? = null,
     val callGroups: List<com.secyra.ai.core.telecom.CallGroup> = emptyList()
 )

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.res.painterResource
 import com.secyra.ai.feature.emails.EmailsScreen
 import com.secyra.ai.feature.search.SearchScreen
+import com.secyra.ai.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,7 +57,8 @@ import kotlinx.coroutines.launch
 fun CallsScreen(
     modifier: Modifier = Modifier,
     viewModel: CallsViewModel = hiltViewModel(),
-    onNavigateToSearch: () -> Unit = {}
+    onNavigateToSearch: () -> Unit = {},
+    onNavigateToOnboarding: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -85,6 +87,17 @@ fun CallsScreen(
         viewModel.onPageSelected(PageIndex.values()[pagerState.currentPage])
     }
 
+    // Check if default phone app and show onboarding prompt
+    LaunchedEffect(Unit) {
+        viewModel.checkDefaultPhoneStatus()
+    }
+
+    LaunchedEffect(uiState.showOnboardingPrompt) {
+        if (uiState.showOnboardingPrompt) {
+            // Show a prompt card for default phone app
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -95,6 +108,14 @@ fun CallsScreen(
             onSearchClick = { onNavigateToSearch() },
             onMenuClick = { }
         )
+
+        // Default Phone App Onboarding Banner
+        if (!uiState.isDefaultPhoneApp) {
+            DefaultPhoneAppBanner(
+                onSetAsDefault = { onNavigateToOnboarding() },
+                onDismiss = { viewModel.dismissOnboardingPrompt() }
+            )
+        }
 
         // Calls / Messages Segmented Control
         CallsMessagesSegmentedControl(
@@ -295,6 +316,65 @@ fun CallsPageContent(
             }
         }
     }
+    }
+}
+
+@Composable
+fun DefaultPhoneAppBanner(
+    onSetAsDefault: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF0A1520)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            TiffanyBlue.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = null,
+                    tint = TiffanyBlue,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column {
+                    Text(
+                        text = "Enable Full Call Features",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = SecyraWhite,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Set Secyra as default phone app for custom incoming call screen",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SecyraTextSecondary
+                    )
+                }
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = SecyraTextMuted
+                )
+            }
+        }
     }
 }
 

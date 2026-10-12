@@ -20,6 +20,7 @@ import com.secyra.ai.feature.home.HomeScreen
 import com.secyra.ai.feature.learn.LearnScreen
 import com.secyra.ai.feature.link.LinkSecurityScreen
 import com.secyra.ai.feature.message.MessageSecurityScreen
+import com.secyra.ai.feature.onboarding.DefaultDialerOnboardingScreen
 import com.secyra.ai.feature.privacy.PrivacyScreen
 import com.secyra.ai.feature.scan.ScanScreen
 import com.secyra.ai.feature.search.SearchScreen
@@ -75,6 +76,9 @@ fun SecyraNavHost() {
                 CallsScreen(
                     onNavigateToSearch = {
                         navController.navigate(Screen.Search.route)
+                    },
+                    onNavigateToOnboarding = {
+                        navController.navigate(Screen.DefaultDialerOnboarding.route)
                     }
                 )
             }
@@ -132,6 +136,12 @@ fun SecyraNavHost() {
             composable(Screen.Search.route) {
                 SearchScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.DefaultDialerOnboarding.route) {
+                DefaultDialerOnboardingScreen(
+                    onComplete = { navController.popBackStack() },
+                    onSkip = { navController.popBackStack() }
                 )
             }
         }

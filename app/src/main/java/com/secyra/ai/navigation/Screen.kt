@@ -19,4 +19,5 @@ sealed class Screen(val route: String) {
     object Search : Screen("search")
     object IncomingCall : Screen("incoming_call")
     object ActiveCall : Screen("active_call")
+    object DefaultDialerOnboarding : Screen("default_dialer_onboarding")
 }
