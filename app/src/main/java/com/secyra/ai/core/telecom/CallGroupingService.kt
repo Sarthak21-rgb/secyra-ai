@@ -4,7 +4,7 @@ import java.util.Locale
 
 /**
  * Service for grouping call log records according to production-quality rules.
- * Implements 7-hour rolling window grouping with phone number normalization.
+ * Implements 23-hour rolling window grouping with phone number normalization.
  */
 class CallGroupingService(
     private val config: CallGroupingConfig = CallGroupingConfig(),
@@ -28,10 +28,11 @@ class CallGroupingService(
     /**
      * Groups raw call records according to the defined rules:
      * 1. Group by normalized phone number
-     * 2. Use 7-hour rolling window
-     * 3. Preserve groups after gaps > 7 hours
-     * 4. Mixed directions can be in same group
-     * 5. Track total and missed counts separately
+     * 2. Use 23-hour rolling window
+     * 3. Preserve groups after gaps > 23 hours
+     * 4. Combine incoming and outgoing calls in same group
+     * 5. Show latest call (can be incoming or outgoing) as group representative
+     * 6. Track total and missed counts separately
      */
     fun groupCalls(rawCalls: List<RawCallRecord>): CallGroupingResult {
         if (rawCalls.isEmpty()) {
@@ -68,51 +69,39 @@ class CallGroupingService(
 
     /**
      * Groups calls for a single phone number.
-     * - Incoming/Outgoing: Show only the latest call (no time-based grouping)
-     * - Missed: Group all missed calls with 7-hour window until user calls back
+     * - Combine incoming and outgoing calls in same group
+     * - Use 23-hour rolling window for time-based grouping
+     * - Show latest call (incoming or outgoing) as group representative
+     * - Missed calls are grouped separately with 23-hour window until user calls back
      */
     private fun groupCallsByNumber(calls: List<RawCallRecord>, phoneNumber: String): List<CallGroup> {
         if (calls.isEmpty()) return emptyList()
 
         val groups = mutableListOf<CallGroup>()
 
-        // Separate calls by type
+        // Separate missed calls from non-missed calls
         val missedCalls = calls.filter { it.callType == CallType.MISSED }
-        val incomingCalls = calls.filter { it.callType == CallType.INCOMING }
-        val outgoingCalls = calls.filter { it.callType == CallType.OUTGOING }
-        val otherCalls = calls.filter { 
-            it.callType != CallType.MISSED && 
-            it.callType != CallType.INCOMING && 
-            it.callType != CallType.OUTGOING 
+        val nonMissedCalls = calls.filter { it.callType != CallType.MISSED }
+
+        // Group non-missed calls (incoming + outgoing combined) with 23-hour window
+        if (nonMissedCalls.isNotEmpty()) {
+            groups.addAll(groupCallsByType(nonMissedCalls))
         }
 
-        // For incoming/outgoing/other: show only the latest call (no grouping)
-        val latestIncoming = incomingCalls.maxByOrNull { it.timestampMillis }
-        val latestOutgoing = outgoingCalls.maxByOrNull { it.timestampMillis }
-        val latestOther = otherCalls.maxByOrNull { it.timestampMillis }
-
-        latestIncoming?.let { call ->
-            groups.add(createSingleCallGroup(call))
-        }
-        latestOutgoing?.let { call ->
-            groups.add(createSingleCallGroup(call))
-        }
-        latestOther?.let { call ->
-            groups.add(createSingleCallGroup(call))
-        }
-
-        // For missed calls: group with 7-hour window
-        // Group all missed calls together (reset after outgoing call)
+        // Group missed calls separately with 23-hour window
+        // Reset grouping if user called back (outgoing call after missed)
         if (missedCalls.isNotEmpty()) {
-            // Check if there's an outgoing call after the last missed call
             val lastMissedCall = missedCalls.maxByOrNull { it.timestampMillis }
-            val hasOutgoingAfterMissed = outgoingCalls.any { 
+            val hasOutgoingAfterMissed = nonMissedCalls.any { 
+                it.callType == CallType.OUTGOING &&
                 it.timestampMillis > (lastMissedCall?.timestampMillis ?: 0) 
             }
             
             if (hasOutgoingAfterMissed) {
                 // If user called back, only group missed calls before the outgoing call
-                val earliestOutgoing = outgoingCalls.minByOrNull { it.timestampMillis }
+                val earliestOutgoing = nonMissedCalls
+                    .filter { it.callType == CallType.OUTGOING }
+                    .minByOrNull { it.timestampMillis }
                 val missedBeforeCallback = missedCalls.filter { 
                     it.timestampMillis < (earliestOutgoing?.timestampMillis ?: Long.MAX_VALUE) 
                 }
@@ -127,7 +116,7 @@ class CallGroupingService(
                     groups.addAll(groupCallsByType(missedAfterCallback))
                 }
             } else {
-                // No callback yet - group all missed calls
+                // No callback yet - group all missed calls with 23-hour window
                 groups.addAll(groupCallsByType(missedCalls))
             }
         }
@@ -136,25 +125,7 @@ class CallGroupingService(
     }
 
     /**
-     * Creates a group for a single call (for incoming/outgoing latest calls).
-     */
-    private fun createSingleCallGroup(call: RawCallRecord): CallGroup {
-        return CallGroup(
-            phoneNumber = call.phoneNumber,
-            normalizedNumber = call.normalizedNumber,
-            contactName = call.contactName,
-            contactPhotoUri = call.contactPhotoUri,
-            isSavedContact = call.isSavedContact,
-            totalCallCount = 1,
-            missedCallCount = if (call.callType == CallType.MISSED) 1 else 0,
-            newestCall = call,
-            calls = listOf(call),
-            isBlocked = call.isBlocked
-        )
-    }
-
-    /**
-     * Groups calls of the same type using 7-hour rolling window.
+     * Groups calls of the same type using 23-hour rolling window.
      */
     private fun groupCallsByType(calls: List<RawCallRecord>): List<CallGroup> {
         if (calls.isEmpty()) return emptyList()
@@ -173,10 +144,10 @@ class CallGroupingService(
                 val timeGap = call.timestampMillis - newestCallInGroup.timestampMillis
 
                 if (timeGap <= config.groupingWindowMillis) {
-                    // Within 7-hour window - add to current group
+                    // Within 23-hour window - add to current group
                     currentGroupCalls.add(call)
                 } else {
-                    // Gap exceeds 7 hours - finalize current group and start new one
+                    // Gap exceeds 23 hours - finalize current group and start new one
                     if (currentGroupCalls.isNotEmpty()) {
                         groups.add(createGroup(currentGroupCalls))
                     }

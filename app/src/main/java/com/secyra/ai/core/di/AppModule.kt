@@ -210,7 +210,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCallGroupingConfig(): CallGroupingConfig {
-        return CallGroupingConfig(groupingWindowHours = 7)
+        return CallGroupingConfig(groupingWindowHours = 23)
     }
 
     @Provides

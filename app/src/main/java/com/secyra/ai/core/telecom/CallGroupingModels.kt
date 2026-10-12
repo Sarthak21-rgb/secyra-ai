@@ -33,8 +33,9 @@ enum class CallType {
 /**
  * A group of calls that belong together based on:
  * - Same normalized phone number
- * - Within 7-hour rolling window
+ * - Within 23-hour rolling window
  * - Same resolved contact (if available)
+ * - Combines incoming and outgoing calls
  */
 data class CallGroup(
     val phoneNumber: String,
@@ -68,7 +69,7 @@ data class CallGroupingResult(
  * Configuration for call grouping
  */
 data class CallGroupingConfig(
-    val groupingWindowHours: Int = 7
+    val groupingWindowHours: Int = 23
 ) {
     val groupingWindowMillis: Long
         get() = groupingWindowHours * 60 * 60 * 1000L
