@@ -28,6 +28,11 @@ import com.secyra.ai.data.repository.Contact
 import com.secyra.ai.domain.model.RiskLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Calendar as JavaCalendar
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -250,21 +255,21 @@ class CallsViewModel @Inject constructor(
 
     private fun formatTimestamp(timestampMillis: Long): String {
         val now = System.currentTimeMillis()
-        val calendarNow = java.util.Calendar.getInstance()
-        val calendarCall = java.util.Calendar.getInstance()
+        val calendarNow = JavaCalendar.getInstance()
+        val calendarCall = JavaCalendar.getInstance()
         calendarCall.timeInMillis = timestampMillis
 
         // Check if same day (midnight to midnight)
-        val isSameDay = calendarNow.get(java.util.Calendar.YEAR) == calendarCall.get(java.util.Calendar.YEAR) &&
-                        calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarCall.get(java.util.Calendar.DAY_OF_YEAR)
+        val isSameDay = calendarNow.get(JavaCalendar.YEAR) == calendarCall.get(JavaCalendar.YEAR) &&
+                        calendarNow.get(JavaCalendar.DAY_OF_YEAR) == calendarCall.get(JavaCalendar.DAY_OF_YEAR)
 
         // Check if yesterday
-        calendarNow.add(java.util.Calendar.DAY_OF_YEAR, -1)
-        val isYesterday = calendarNow.get(java.util.Calendar.YEAR) == calendarCall.get(java.util.Calendar.YEAR) &&
-                         calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarCall.get(java.util.Calendar.DAY_OF_YEAR)
+        calendarNow.add(JavaCalendar.DAY_OF_YEAR, -1)
+        val isYesterday = calendarNow.get(JavaCalendar.YEAR) == calendarCall.get(JavaCalendar.YEAR) &&
+                         calendarNow.get(JavaCalendar.DAY_OF_YEAR) == calendarCall.get(JavaCalendar.DAY_OF_YEAR)
 
-        val date = java.util.Date(timestampMillis)
-        val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+        val date = Date(timestampMillis)
+        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
         val timeStr = timeFormat.format(date)
 
         return when {
@@ -278,7 +283,7 @@ class CallsViewModel @Inject constructor(
             }
             else -> {
                 // Other days - show first 3 letters of day name + time
-                val dayFormat = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
+                val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
                 val dayStr = dayFormat.format(date).take(3)
                 "$dayStr, $timeStr"
             }
@@ -404,8 +409,151 @@ class CallsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedContactForProfile = call)
     }
 
+    fun onViewGroupProfile(group: com.secyra.ai.core.telecom.CallGroup) {
+        // Convert group to CallItem for profile display
+        val callTypeIcon = when (group.newestCall.callType) {
+            com.secyra.ai.core.telecom.CallType.INCOMING -> Icons.Default.CallReceived
+            com.secyra.ai.core.telecom.CallType.OUTGOING -> Icons.Default.CallMade
+            com.secyra.ai.core.telecom.CallType.MISSED -> Icons.Default.PhoneMissed
+            com.secyra.ai.core.telecom.CallType.REJECTED -> Icons.Default.PhoneMissed
+            com.secyra.ai.core.telecom.CallType.BLOCKED -> Icons.Default.Block
+            com.secyra.ai.core.telecom.CallType.VOICEMAIL -> Icons.Default.Voicemail
+            com.secyra.ai.core.telecom.CallType.UNKNOWN -> Icons.Default.Phone
+        }
+        
+        val callIconColor = when (group.newestCall.callType) {
+            com.secyra.ai.core.telecom.CallType.MISSED -> Color(0xFFFF4D6D)
+            com.secyra.ai.core.telecom.CallType.REJECTED -> Color(0xFFFF6B6B)
+            else -> Color(0xFF8AB4F8)
+        }
+        
+        // Simple hash-based color generation
+        val displayName = group.contactName ?: group.phoneNumber
+        val colorHash = (displayName + group.phoneNumber).hashCode()
+        val avatarColor = when (kotlin.math.abs(colorHash) % 23) {
+            0 -> Color(0xFF007FFF)
+            1 -> Color(0xFF0ABAB5)
+            2 -> Color(0xFF008080)
+            3 -> Color(0xFF8A2BE2)
+            4 -> Color(0xFFFF9933)
+            5 -> Color(0xFF2E8B57)
+            6 -> Color(0xFF00A86B)
+            7 -> Color(0xFF960018)
+            8 -> Color(0xFF8E4585)
+            9 -> Color(0xFF003366)
+            10 -> Color(0xFFB8860B)
+            11 -> Color(0xFF3CB371)
+            12 -> Color(0xFFDC143C)
+            13 -> Color(0xFF4B0082)
+            14 -> Color(0xFF228B22)
+            15 -> Color(0xFF800020)
+            16 -> Color(0xFF191970)
+            17 -> Color(0xFF006400)
+            18 -> Color(0xFFB22222)
+            19 -> Color(0xFF4B0082)
+            20 -> Color(0xFF800000)
+            21 -> Color(0xFF00CED1)
+            22 -> Color(0xFF556B2F)
+            else -> Color(0xFF007FFF)
+        }
+        
+        val securityTag = if (group.isBlocked) SecurityTag.SUSPICIOUS else if (group.isSavedContact) SecurityTag.TRUSTED else SecurityTag.UNKNOWN
+        
+        val callItem = CallItem(
+            id = group.newestCall.id.toString(),
+            name = displayName,
+            initials = displayName.firstOrNull()?.toString() ?: "#",
+            status = when (group.newestCall.callType) {
+                com.secyra.ai.core.telecom.CallType.INCOMING -> "Incoming"
+                com.secyra.ai.core.telecom.CallType.OUTGOING -> "Outgoing"
+                com.secyra.ai.core.telecom.CallType.MISSED -> "Missed"
+                com.secyra.ai.core.telecom.CallType.REJECTED -> "Declined"
+                com.secyra.ai.core.telecom.CallType.BLOCKED -> "Blocked"
+                com.secyra.ai.core.telecom.CallType.VOICEMAIL -> "Voicemail"
+                com.secyra.ai.core.telecom.CallType.UNKNOWN -> "Unknown"
+            },
+            statusColor = callIconColor,
+            avatarColor = avatarColor,
+            timestamp = formatTimestamp(group.newestCall.timestampMillis),
+            phoneNumber = group.phoneNumber,
+            isSpam = group.isBlocked,
+            isTrusted = group.isSavedContact,
+            callIconColor = callIconColor,
+            isSavedContact = group.isSavedContact,
+            contactId = null,
+            callCountInHour = if (group.totalCallCount > 1) group.totalCallCount else 0,
+            callTypeIcon = callTypeIcon,
+            callType = when (group.newestCall.callType) {
+                com.secyra.ai.core.telecom.CallType.INCOMING -> CallType.INCOMING
+                com.secyra.ai.core.telecom.CallType.OUTGOING -> CallType.OUTGOING
+                com.secyra.ai.core.telecom.CallType.MISSED -> CallType.MISSED
+                com.secyra.ai.core.telecom.CallType.REJECTED -> CallType.REJECTED
+                com.secyra.ai.core.telecom.CallType.BLOCKED -> CallType.BLOCKED
+                com.secyra.ai.core.telecom.CallType.VOICEMAIL -> CallType.UNKNOWN
+                com.secyra.ai.core.telecom.CallType.UNKNOWN -> CallType.UNKNOWN
+            },
+            securityTag = securityTag,
+            timestampMillis = group.newestCall.timestampMillis
+        )
+        _uiState.value = _uiState.value.copy(selectedContactForProfile = callItem)
+    }
+
     fun onContactProfileDismissed() {
         _uiState.value = _uiState.value.copy(selectedContactForProfile = null)
+    }
+
+    fun onContactProfileClick(contact: Contact) {
+        // Convert Contact to CallItem for profile display
+        // Simple hash-based color generation
+        val colorHash = (contact.name + contact.phoneNumber).hashCode()
+        val avatarColor = when (kotlin.math.abs(colorHash) % 23) {
+            0 -> Color(0xFF007FFF)
+            1 -> Color(0xFF0ABAB5)
+            2 -> Color(0xFF008080)
+            3 -> Color(0xFF8A2BE2)
+            4 -> Color(0xFFFF9933)
+            5 -> Color(0xFF2E8B57)
+            6 -> Color(0xFF00A86B)
+            7 -> Color(0xFF960018)
+            8 -> Color(0xFF8E4585)
+            9 -> Color(0xFF003366)
+            10 -> Color(0xFFB8860B)
+            11 -> Color(0xFF3CB371)
+            12 -> Color(0xFFDC143C)
+            13 -> Color(0xFF4B0082)
+            14 -> Color(0xFF228B22)
+            15 -> Color(0xFF800020)
+            16 -> Color(0xFF191970)
+            17 -> Color(0xFF006400)
+            18 -> Color(0xFFB22222)
+            19 -> Color(0xFF4B0082)
+            20 -> Color(0xFF800000)
+            21 -> Color(0xFF00CED1)
+            22 -> Color(0xFF556B2F)
+            else -> Color(0xFF007FFF)
+        }
+        
+        val callItem = CallItem(
+            id = contact.id?.toString() ?: "0",
+            name = contact.name,
+            initials = contact.name.firstOrNull()?.toString() ?: "#",
+            status = "Contact",
+            statusColor = Color(0xFF8AB4F8),
+            avatarColor = avatarColor,
+            timestamp = "",
+            phoneNumber = contact.phoneNumber,
+            isSpam = false,
+            isTrusted = true,
+            callIconColor = Color(0xFF8AB4F8),
+            isSavedContact = true,
+            contactId = contact.id?.toString(),
+            callCountInHour = 0,
+            callTypeIcon = Icons.Default.Phone,
+            callType = CallType.INCOMING,
+            securityTag = SecurityTag.TRUSTED,
+            timestampMillis = System.currentTimeMillis()
+        )
+        _uiState.value = _uiState.value.copy(selectedContactForProfile = callItem)
     }
 
     fun onCallContact(contact: Contact) {

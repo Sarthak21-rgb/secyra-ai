@@ -220,7 +220,7 @@ fun CallsPageContent(
                         items(today) { group ->
                             CallGroupRow(
                                 group = group,
-                                onProfileClick = { /* TODO: Navigate to contact profile */ },
+                                onProfileClick = { viewModel.onViewGroupProfile(group) },
                                 onCallClick = { viewModel.onCallPhoneNumber(group.phoneNumber) }
                             )
                         }
@@ -233,7 +233,7 @@ fun CallsPageContent(
                         items(yesterday) { group ->
                             CallGroupRow(
                                 group = group,
-                                onProfileClick = { /* TODO: Navigate to contact profile */ },
+                                onProfileClick = { viewModel.onViewGroupProfile(group) },
                                 onCallClick = { viewModel.onCallPhoneNumber(group.phoneNumber) }
                             )
                         }
@@ -246,7 +246,7 @@ fun CallsPageContent(
                         items(older) { group ->
                             CallGroupRow(
                                 group = group,
-                                onProfileClick = { /* TODO: Navigate to contact profile */ },
+                                onProfileClick = { viewModel.onViewGroupProfile(group) },
                                 onCallClick = { viewModel.onCallPhoneNumber(group.phoneNumber) }
                             )
                         }
@@ -268,7 +268,7 @@ fun CallsPageContent(
                     items(recentGroups) { group ->
                         CallGroupRow(
                             group = group,
-                            onProfileClick = { /* TODO: Navigate to contact profile */ },
+                            onProfileClick = { viewModel.onViewGroupProfile(group) },
                             onCallClick = { viewModel.onCallPhoneNumber(group.phoneNumber) }
                         )
                     }
@@ -284,7 +284,7 @@ fun CallsPageContent(
                     items(blockedGroups) { group ->
                         CallGroupRow(
                             group = group,
-                            onProfileClick = { /* TODO: Navigate to contact profile */ },
+                            onProfileClick = { viewModel.onViewGroupProfile(group) },
                             onCallClick = { viewModel.onCallPhoneNumber(group.phoneNumber) }
                         )
                     }
@@ -313,6 +313,7 @@ fun CallsPageContent(
                     items(uiState.contacts) { contact ->
                         ContactCard(
                             contact = contact,
+                            onProfileClick = { viewModel.onContactProfileClick(contact) },
                             onCallClick = { viewModel.onCallContact(contact) }
                         )
                     }
@@ -1139,13 +1140,14 @@ fun CallRowCard(
 @Composable
 fun ContactCard(
     contact: com.secyra.ai.data.repository.Contact,
+    onProfileClick: () -> Unit,
     onCallClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(88.dp)
-            .clickable(onClick = onCallClick),
+            .clickable(onClick = onProfileClick),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF0A0A0A)
         ),
