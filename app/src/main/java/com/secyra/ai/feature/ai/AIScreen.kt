@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -172,36 +174,77 @@ fun AIAssistantHomeScreen(
             ) {
                 // Chat messages
                 if (uiState.messages.isEmpty()) {
+                    // Welcome state with suggested prompts
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .weight(1f),
+                            .weight(1f)
+                            .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            androidx.compose.foundation.Image(
-                                painter = painterResource(R.drawable.robot),
-                                contentDescription = null,
-                                modifier = Modifier.size(200.dp),
-                                contentScale = ContentScale.Fit
+                            Text(
+                                text = "Your security. Your intelligence.",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = SecyraWhite,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp,
+                                textAlign = TextAlign.Center
                             )
                             Text(
-                                text = "Start a conversation",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = SecyraTextSecondary
+                                text = "Ask anything, understand risks, and make safer decisions with Secyra AI.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = SecyraTextSecondary,
+                                fontSize = 16.sp,
+                                textAlign = TextAlign.Center
                             )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Suggested prompts
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                SuggestedPrompt(
+                                    text = "Is this message a scam?",
+                                    onClick = { onInputChange("Is this message a scam?") }
+                                )
+                                SuggestedPrompt(
+                                    text = "Explain this suspicious link",
+                                    onClick = { onInputChange("Explain this suspicious link") }
+                                )
+                                SuggestedPrompt(
+                                    text = "How can I secure my phone?",
+                                    onClick = { onInputChange("How can I secure my phone?") }
+                                )
+                                SuggestedPrompt(
+                                    text = "Help me understand this screen",
+                                    onClick = { onInputChange("Help me understand this screen") }
+                                )
+                            }
                         }
                     }
                 } else {
+                    val listState = rememberLazyListState()
+                    
+                    // Auto-scroll to bottom when new message arrives
+                    LaunchedEffect(uiState.messages.size) {
+                        if (uiState.messages.isNotEmpty()) {
+                            listState.animateScrollToItem(uiState.messages.size - 1)
+                        }
+                    }
+                    
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f)
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.messages) { message ->
                             ChatMessageItem(message)
@@ -569,10 +612,16 @@ fun ChatComposer(
     onStopVoiceInput: () -> Unit,
     isRecording: Boolean
 ) {
-    Row(
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var text by remember { mutableStateOf(inputText) }
+    
+    LaunchedEffect(inputText) {
+        text = inputText
+    }
+    
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
             .background(Color(0xFF030A12), RoundedCornerShape(36.dp))
             .border(
                 width = 1.dp,
@@ -581,33 +630,26 @@ fun ChatComposer(
                 ),
                 shape = RoundedCornerShape(36.dp)
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        IconButton(
-            onClick = onAddAttachment,
-            modifier = Modifier.size(40.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add attachment",
-                tint = SecyraWhite,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        
+        // Multiline text input area
         OutlinedTextField(
-            value = inputText,
-            onValueChange = onInputChange,
+            value = text,
+            onValueChange = { 
+                text = it
+                onInputChange(it)
+            },
             placeholder = { 
                 Text(
-                    "Type your question...",
+                    "Ask Secyra anything...",
                     color = SecyraTextMuted,
-                    fontSize = 14.sp
+                    fontSize = 15.sp
                 ) 
             },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 80.dp, max = 200.dp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -616,37 +658,65 @@ fun ChatComposer(
                 focusedTextColor = SecyraWhite,
                 unfocusedTextColor = SecyraWhite
             ),
-            singleLine = true
+            textStyle = TextStyle(
+                color = SecyraWhite,
+                fontSize = 15.sp
+            ),
+            maxLines = 6
         )
         
-        IconButton(
-            onClick = { if (isRecording) onStopVoiceInput() else onStartVoiceInput() },
-            modifier = Modifier.size(40.dp)
+        // Bottom controls row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
-                contentDescription = if (isRecording) "Stop recording" else "Voice input",
-                tint = SecyraWhite,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        
-        IconButton(
-            onClick = { onSend(inputText) },
-            enabled = inputText.isNotBlank(),
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    if (inputText.isNotBlank()) AzureBlue else AzureBlue.copy(alpha = 0.4f),
-                    CircleShape
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onAddAttachment,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add attachment",
+                        tint = SecyraWhite,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                
+                IconButton(
+                    onClick = { if (isRecording) onStopVoiceInput() else onStartVoiceInput() },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                        contentDescription = if (isRecording) "Stop recording" else "Voice input",
+                        tint = SecyraWhite,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            
+            IconButton(
+                onClick = { 
+                    keyboardController?.hide()
+                    onSend(text)
+                },
+                enabled = text.isNotBlank(),
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        if (text.isNotBlank()) AzureBlue else AzureBlue.copy(alpha = 0.4f),
+                        CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowUpward,
+                    contentDescription = "Send",
+                    tint = SecyraWhite,
+                    modifier = Modifier.size(24.dp)
                 )
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowUpward,
-                contentDescription = "Send",
-                tint = SecyraWhite,
-                modifier = Modifier.size(20.dp)
-            )
+            }
         }
     }
 }
@@ -752,6 +822,47 @@ private fun formatTimestamp(timestamp: Long): String {
 }
 
 @Composable
+fun SuggestedPrompt(
+    text: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        ),
+        border = BorderStroke(
+            1.dp,
+            SecyraBorder
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.ChatBubbleOutline,
+                contentDescription = null,
+                tint = TiffanyBlue,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = SecyraWhite,
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
+@Composable
 fun ChatMessageItem(message: ChatMessage) {
     val isUser = message.role == "user"
     
@@ -759,33 +870,145 @@ fun ChatMessageItem(message: ChatMessage) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (isUser) {
-                    TiffanyBlue.copy(alpha = 0.2f)
-                } else {
-                    SecyraSurfaceElevated
-                }
-            ),
-            border = BorderStroke(
-                1.dp,
-                if (isUser) TiffanyBlue else SecyraBorder
-            ),
-            shape = RoundedCornerShape(16.dp)
+        Column(
+            modifier = Modifier.widthIn(max = 300.dp),
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp).widthIn(max = 280.dp)
+            // Message bubble
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.Transparent
+                ),
+                border = if (isUser) {
+                    BorderStroke(
+                        1.dp,
+                        Brush.horizontalGradient(
+                            colors = listOf(AzureBlue, TiffanyBlue)
+                        )
+                    )
+                } else {
+                    null
+                },
+                shape = RoundedCornerShape(20.dp)
             ) {
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SecyraWhite
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SecyraWhite,
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp
+                    )
+                }
+            }
+            
+            // Timestamp
+            Text(
+                text = formatTimestamp(message.timestamp),
+                style = MaterialTheme.typography.labelSmall,
+                color = SecyraTextMuted,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(
+                    start = if (isUser) 0.dp else 4.dp,
+                    end = if (isUser) 4.dp else 0.dp,
+                    top = 4.dp
                 )
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SecyraTextMuted
-                )
+            )
+            
+            // Action toolbar for AI responses
+            if (!isUser) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    // Copy
+                    IconButton(
+                        onClick = { /* TODO: Implement copy */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    // Listen
+                    IconButton(
+                        onClick = { /* TODO: Implement TTS */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Listen",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    // Share
+                    IconButton(
+                        onClick = { /* TODO: Implement share */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    // Helpful
+                    IconButton(
+                        onClick = { /* TODO: Implement feedback */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Helpful",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    // Not helpful
+                    IconButton(
+                        onClick = { /* TODO: Implement feedback */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbDown,
+                            contentDescription = "Not helpful",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    // Regenerate
+                    IconButton(
+                        onClick = { /* TODO: Implement regenerate */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Regenerate",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    // More
+                    IconButton(
+                        onClick = { /* TODO: Implement more options */ },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = SecyraTextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
     }
