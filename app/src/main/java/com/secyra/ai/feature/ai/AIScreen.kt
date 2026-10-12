@@ -45,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.secyra.ai.R
 import com.secyra.ai.core.ui.theme.*
 import com.secyra.ai.navigation.Screen
+import androidx.compose.foundation.layout.imePadding
 
 // Gradient text composable
 @Composable
@@ -166,7 +167,6 @@ fun AIAssistantHomeScreen(
     onRemoveAttachment: (Int) -> Unit
 ) {
     var isInputFocused by remember { mutableStateOf(false) }
-    val keyboardController = LocalSoftwareKeyboardController.current
     
     Box(modifier = Modifier.fillMaxSize()) {
         if (showChat) {
@@ -174,7 +174,8 @@ fun AIAssistantHomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(SecyraBackground),
+                    .background(SecyraBackground)
+                    .imePadding(),
             ) {
                 // Chat messages (hide when input is focused)
                 if (!isInputFocused) {
@@ -635,13 +636,10 @@ fun ChatComposer(
         onFocusChange(isFocused)
     }
     
-    val containerHeight = if (isFocused) 160.dp else 72.dp
-    val inputHeight = if (isFocused) 120.dp else 48.dp
-    
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(containerHeight)
+            .height(72.dp)
             .background(Color(0xFF030A12), RoundedCornerShape(36.dp))
             .border(
                 width = 1.dp,
@@ -650,10 +648,22 @@ fun ChatComposer(
                 ),
                 shape = RoundedCornerShape(36.dp)
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Multiline text input area
+        IconButton(
+            onClick = onAddAttachment,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add attachment",
+                tint = SecyraWhite,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        
         OutlinedTextField(
             value = text,
             onValueChange = { 
@@ -662,14 +672,12 @@ fun ChatComposer(
             },
             placeholder = { 
                 Text(
-                    "Ask Secyra anything...",
+                    "Type your question...",
                     color = SecyraTextMuted,
-                    fontSize = 15.sp
+                    fontSize = 14.sp
                 ) 
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(inputHeight)
+            modifier = Modifier.weight(1f)
                 .onFocusChanged { focusState ->
                     isFocused = focusState.isFocused
                 },
@@ -681,66 +689,40 @@ fun ChatComposer(
                 focusedTextColor = SecyraWhite,
                 unfocusedTextColor = SecyraWhite
             ),
-            textStyle = TextStyle(
-                color = SecyraWhite,
-                fontSize = 15.sp
-            ),
-            maxLines = if (isFocused) 6 else 1,
-            singleLine = !isFocused
+            singleLine = true
         )
         
-        // Bottom controls row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        IconButton(
+            onClick = { if (isRecording) onStopVoiceInput() else onStartVoiceInput() },
+            modifier = Modifier.size(40.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = onAddAttachment,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add attachment",
-                        tint = SecyraWhite,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                IconButton(
-                    onClick = { if (isRecording) onStopVoiceInput() else onStartVoiceInput() },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
-                        contentDescription = if (isRecording) "Stop recording" else "Voice input",
-                        tint = SecyraWhite,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            
-            IconButton(
-                onClick = { 
-                    keyboardController?.hide()
-                    onSend(text)
-                },
-                enabled = text.isNotBlank(),
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        if (text.isNotBlank()) AzureBlue else AzureBlue.copy(alpha = 0.4f),
-                        CircleShape
-                    )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowUpward,
-                    contentDescription = "Send",
-                    tint = SecyraWhite,
-                    modifier = Modifier.size(24.dp)
+            Icon(
+                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                contentDescription = if (isRecording) "Stop recording" else "Voice input",
+                tint = SecyraWhite,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        
+        IconButton(
+            onClick = { 
+                keyboardController?.hide()
+                onSend(text)
+            },
+            enabled = text.isNotBlank(),
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    if (text.isNotBlank()) AzureBlue else AzureBlue.copy(alpha = 0.4f),
+                    CircleShape
                 )
-            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowUpward,
+                contentDescription = "Send",
+                tint = SecyraWhite,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
