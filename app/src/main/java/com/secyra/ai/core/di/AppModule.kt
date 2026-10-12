@@ -6,6 +6,9 @@ import com.secyra.ai.core.notifications.CallNotificationManager
 import com.secyra.ai.core.permissions.PermissionManager
 import com.secyra.ai.core.security.AIProvider
 import com.secyra.ai.core.security.LlamaProvider
+import com.secyra.ai.core.threat.PlaceholderThreatProvider
+import com.secyra.ai.core.threat.ThreatIntelligenceProvider
+import com.secyra.ai.core.threat.ThreatIntelligenceService
 import com.secyra.ai.core.security.SecurityEngine
 import com.secyra.ai.core.security.SpamDetectionEngine
 import com.secyra.ai.core.security.CallerIdentificationService
@@ -55,6 +58,22 @@ object AppModule {
         supabaseConfig: SupabaseConfig
     ): LlamaProvider {
         return LlamaProvider(supabaseConfig)
+    }
+
+    @Provides
+    @Singleton
+    fun provideThreatIntelligenceProvider(
+        supabaseConfig: SupabaseConfig
+    ): ThreatIntelligenceProvider {
+        return PlaceholderThreatProvider(supabaseConfig)
+    }
+
+    @Provides
+    @Singleton
+    fun provideThreatIntelligenceService(
+        provider: ThreatIntelligenceProvider
+    ): ThreatIntelligenceService {
+        return ThreatIntelligenceService(provider)
     }
 
     @Provides
