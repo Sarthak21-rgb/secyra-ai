@@ -2,6 +2,7 @@ package com.secyra.ai.core.di
 
 import android.content.Context
 import com.secyra.ai.core.network.SupabaseConfig
+import com.secyra.ai.core.notifications.CallNotificationManager
 import com.secyra.ai.core.permissions.PermissionManager
 import com.secyra.ai.core.security.AIProvider
 import com.secyra.ai.core.security.LlamaProvider
@@ -38,6 +39,14 @@ object AppModule {
     @Singleton
     fun provideSecurityEngine(): SecurityEngine {
         return SecurityEngine()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCallNotificationManager(
+        @ApplicationContext context: Context
+    ): CallNotificationManager {
+        return CallNotificationManager(context)
     }
 
     @Provides

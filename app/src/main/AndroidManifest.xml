@@ -182,6 +182,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- Call Notification Receiver for handling notification actions -->
+        <receiver
+            android:name=".core.notifications.CallNotificationReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.secyra.ai.ACTION_ANSWER" />
+                <action android:name="com.secyra.ai.ACTION_DECLINE" />
+                <action android:name="com.secyra.ai.ACTION_MESSAGE" />
+            </intent-filter>
+        </receiver>
+
         <!-- ConnectionService for handling outgoing calls -->
         <!-- Temporarily disabled due to API compatibility issues -->
         <!--

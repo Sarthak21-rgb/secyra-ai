@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.telecom.Call
 import android.telecom.InCallService
 import android.telecom.CallEndpoint
+import com.secyra.ai.core.notifications.CallNotificationManager
 import com.secyra.ai.feature.calls.ActiveCallActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -24,10 +25,28 @@ class SecyraInCallService : InCallService() {
     @Inject
     lateinit var callManager: CallManager
 
+    @Inject
+    lateinit var callNotificationManager: CallNotificationManager
+
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
         // Register the real call with our CallManager
         callManager.setActiveCall(call)
+
+        // Get call details
+        val details = call.details
+        val callerName = details?.callerDisplayName?.toString() ?: "Unknown"
+        val phoneNumber = details?.handle?.schemeSpecificPart ?: ""
+
+        // Check if it's an incoming call (ringing state)
+        if (call.state == Call.STATE_RINGING) {
+            // Show incoming call notification
+            callNotificationManager.showIncomingCallNotification(
+                callerName = callerName,
+                phoneNumber = phoneNumber,
+                riskLevel = "Unable to verify" // TODO: Integrate with security analysis
+            )
+        }
 
         // Launch the active call screen
         val intent = Intent(this, ActiveCallActivity::class.java).apply {
@@ -41,6 +60,8 @@ class SecyraInCallService : InCallService() {
         // Clean up when call is removed
         if (callManager.activeCall.value == call) {
             callManager.cleanup()
+            callNotificationManager.cancelIncomingCallNotification()
+            callNotificationManager.cancelActiveCallNotification()
         }
     }
 
