@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.res.painterResource
-import com.secyra.ai.feature.emails.EmailsScreen
+import com.secyra.ai.feature.emails.EmailScreen
 import com.secyra.ai.feature.search.SearchScreen
 import com.secyra.ai.navigation.Screen
 import java.text.SimpleDateFormat
@@ -49,7 +49,6 @@ import com.secyra.ai.R
 import com.secyra.ai.core.ui.theme.*
 import com.secyra.ai.data.repository.Contact
 import com.secyra.ai.feature.contacts.ContactProfileScreen
-import com.secyra.ai.feature.emails.EmailsPlaceholderScreen
 import com.secyra.ai.feature.messages.MessagesScreen
 import com.secyra.ai.feature.messages.MessageTab
 import kotlinx.coroutines.launch
@@ -142,7 +141,7 @@ fun CallsScreen(
             when (PageIndex.values()[page]) {
                 PageIndex.Calls -> CallsPageContent(viewModel = viewModel)
                 PageIndex.Messages -> MessagesScreen()
-                PageIndex.Emails -> EmailsScreen()
+                PageIndex.Emails -> EmailScreen()
             }
         }
 

@@ -32,7 +32,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun EmailsScreen(
+fun EmailScreen(
     viewModel: EmailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
