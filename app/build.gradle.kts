@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
 }
 
 android {
@@ -79,13 +80,21 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
+    // Ktor for HTTP requests
+    implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+    implementation("io.ktor:ktor-client-logging:2.3.12")
+
+    // Kotlinx Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
     // Supabase - commented out due to dependency resolution issues
     // implementation("io.github.jan-tennert.supabase:supabase-android:2.5.4")
     // implementation("io.github.jan-tennert.supabase:gotrue-kt:2.5.4")
     // implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.4")
     // implementation("io.github.jan-tennert.supabase:storage-kt:2.5.4")
-    // implementation("io.ktor:ktor-client-android:2.3.12")
-    // implementation("io.ktor:ktor-client-okhttp:2.3.12")
 
     // RevenueCat - commented out due to dependency resolution issues
     // implementation("com.revenuecat.purchases:purchases:7.5.1")

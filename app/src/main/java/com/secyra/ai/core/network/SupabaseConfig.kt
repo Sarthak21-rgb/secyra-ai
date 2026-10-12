@@ -1,10 +1,5 @@
 package com.secyra.ai.core.network
 
-// import io.github.jan.supabase.SupabaseClient
-// import io.github.jan.supabase.createSupabaseClient
-// import io.github.jan.supabase.auth.auth
-// import io.github.jan.supabase.postgrest.postgrest
-// import io.github.jan.supabase.storage.storage
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,26 +15,15 @@ import javax.inject.Singleton
 @Singleton
 class SupabaseConfig @Inject constructor() {
 
-    // TODO: Replace with actual Supabase project credentials
-    // These should be configured in build.gradle.kts with BuildConfig
-    // or loaded from secure configuration
-    private val supabaseUrl = "https://your-project.supabase.co"
-    private val supabaseKey = "your-anon-key"
+    // Supabase project credentials
+    val supabaseUrl: String = "https://qzzaqzddxendznpyivot.supabase.co/"
+    val supabaseKey: String = "sb_publishable_6tVfqgas0qqaHZYQ69kAZw_uULBr3kr"
 
     /**
-     * Create and configure Supabase client
+     * Edge Function endpoints
      */
-    // TODO: Uncomment when Supabase dependencies are properly configured
-    // fun createClient(): SupabaseClient {
-    //     return createSupabaseClient(
-    //         supabaseUrl = supabaseUrl,
-    //         supabaseKey = supabaseKey
-    //     ) {
-    //         install(auth)
-    //         install(postgrest)
-    //         install(storage)
-    //     }
-    // }
+    val edgeFunctionChat: String = "$supabaseUrl/functions/v1/ai-chat"
+    val edgeFunctionAnalyze: String = "$supabaseUrl/functions/v1/ai-analyze"
 
     companion object {
         /**
@@ -50,6 +34,7 @@ class SupabaseConfig @Inject constructor() {
         const val TABLE_AI_CONVERSATIONS = "ai_conversations"
         const val TABLE_SUBSCRIPTIONS = "subscriptions"
         const val TABLE_PRIVACY_SETTINGS = "privacy_settings"
+        const val TABLE_USAGE_LOGS = "usage_logs"
 
         /**
          * Storage bucket names

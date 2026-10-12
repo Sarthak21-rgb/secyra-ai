@@ -1,10 +1,10 @@
 package com.secyra.ai.core.di
 
 import android.content.Context
-// import com.secyra.ai.core.network.RevenueCatConfig
-// import com.secyra.ai.core.network.SupabaseConfig
+import com.secyra.ai.core.network.SupabaseConfig
 import com.secyra.ai.core.permissions.PermissionManager
 import com.secyra.ai.core.security.AIProvider
+import com.secyra.ai.core.security.LlamaProvider
 import com.secyra.ai.core.security.SecurityEngine
 import com.secyra.ai.core.security.SpamDetectionEngine
 import com.secyra.ai.core.security.CallerIdentificationService
@@ -42,16 +42,25 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAIProvider(): AIProvider {
-        return AIProvider()
+    fun provideLlamaProvider(
+        supabaseConfig: SupabaseConfig
+    ): LlamaProvider {
+        return LlamaProvider(supabaseConfig)
     }
 
-    // TODO: Uncomment when Supabase dependencies are properly configured
-    // @Provides
-    // @Singleton
-    // fun provideSupabaseConfig(): SupabaseConfig {
-    //     return SupabaseConfig()
-    // }
+    @Provides
+    @Singleton
+    fun provideAIProvider(
+        llamaProvider: LlamaProvider
+    ): AIProvider {
+        return AIProvider(llamaProvider)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSupabaseConfig(): SupabaseConfig {
+        return SupabaseConfig()
+    }
 
     // TODO: Uncomment when RevenueCat dependencies are properly configured
     // @Provides
