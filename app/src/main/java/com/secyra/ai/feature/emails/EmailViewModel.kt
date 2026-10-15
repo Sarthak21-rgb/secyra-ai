@@ -166,7 +166,7 @@ data class EmailUiState(
     val isEmailIntegrationAvailable: Boolean = false,
     val hasPermission: Boolean = false,
     val isAccountConnected: Boolean = false,
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val isSending: Boolean = false,
     val error: String? = null,
     val requestPermission: Boolean = false

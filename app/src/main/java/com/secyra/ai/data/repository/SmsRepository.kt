@@ -24,52 +24,57 @@ class SmsRepository @Inject constructor(
     suspend fun getConversations(): List<SmsConversation> = withContext(Dispatchers.IO) {
         val conversations = mutableListOf<SmsConversation>()
 
-        val uri = Telephony.Sms.Conversations.CONTENT_URI
-        val projection = arrayOf(
-            Telephony.Sms.Conversations.THREAD_ID,
-            Telephony.Sms.Conversations.SNIPPET,
-            Telephony.Sms.Conversations.MESSAGE_COUNT,
-            Telephony.Sms.Conversations.DATE
-        )
+        try {
+            val uri = Telephony.Sms.Conversations.CONTENT_URI
+            val projection = arrayOf(
+                Telephony.Sms.Conversations.THREAD_ID,
+                Telephony.Sms.Conversations.SNIPPET,
+                Telephony.Sms.Conversations.MESSAGE_COUNT,
+                Telephony.Sms.Conversations.DATE
+            )
 
-        val cursor: Cursor? = context.contentResolver.query(
-            uri,
-            projection,
-            null,
-            null,
-            Telephony.Sms.Conversations.DATE + " DESC"
-        )
+            val cursor: Cursor? = context.contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                Telephony.Sms.Conversations.DATE + " DESC"
+            )
 
-        cursor?.use {
-            val threadIdIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.THREAD_ID)
-            val snippetIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.SNIPPET)
-            val messageCountIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.MESSAGE_COUNT)
-            val dateIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.DATE)
+            cursor?.use {
+                val threadIdIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.THREAD_ID)
+                val snippetIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.SNIPPET)
+                val messageCountIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.MESSAGE_COUNT)
+                val dateIndex = it.getColumnIndexOrThrow(Telephony.Sms.Conversations.DATE)
 
-            while (it.moveToNext()) {
-                val threadId = it.getLong(threadIdIndex)
-                val snippet = it.getString(snippetIndex) ?: ""
-                val messageCount = it.getInt(messageCountIndex)
-                val timestamp = it.getLong(dateIndex)
+                while (it.moveToNext()) {
+                    val threadId = it.getLong(threadIdIndex)
+                    val snippet = it.getString(snippetIndex) ?: ""
+                    val messageCount = it.getInt(messageCountIndex)
+                    val timestamp = it.getLong(dateIndex)
 
-                // Get address from first message in thread
-                val address = getAddressForThread(threadId)
+                    // Get address from first message in thread
+                    val address = getAddressForThread(threadId)
 
-                // Get unread count and latest message direction
-                val (unreadCount, isLatestOutgoing) = getThreadInfo(threadId)
+                    // Get unread count and latest message direction
+                    val (unreadCount, isLatestOutgoing) = getThreadInfo(threadId)
 
-                conversations.add(
-                    SmsConversation(
-                        threadId = threadId,
-                        address = address,
-                        snippet = snippet,
-                        messageCount = messageCount,
-                        timestamp = timestamp,
-                        unreadCount = unreadCount,
-                        isLatestMessageOutgoing = isLatestOutgoing
+                    conversations.add(
+                        SmsConversation(
+                            threadId = threadId,
+                            address = address,
+                            snippet = snippet,
+                            messageCount = messageCount,
+                            timestamp = timestamp,
+                            unreadCount = unreadCount,
+                            isLatestMessageOutgoing = isLatestOutgoing
+                        )
                     )
-                )
+                }
             }
+        } catch (e: Exception) {
+            // Handle permission denied or other errors
+            e.printStackTrace()
         }
 
         conversations

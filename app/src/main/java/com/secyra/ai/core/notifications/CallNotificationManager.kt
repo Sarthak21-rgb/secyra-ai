@@ -90,29 +90,14 @@ class CallNotificationManager @Inject constructor(
         phoneNumber: String,
         riskLevel: String = "Unable to verify"
     ) {
-        // Create intent for tapping notification body (caller info screen)
-        val callerInfoIntent = Intent(context, CallNotificationReceiver::class.java).apply {
-            action = ACTION_CALLER_INFO
-            putExtra(EXTRA_CALLER_NAME, callerName)
-            putExtra(EXTRA_PHONE_NUMBER, phoneNumber)
-            putExtra(EXTRA_NOTIFICATION_ID, NOTIFICATION_ID_INCOMING_CALL)
-        }
-        val callerInfoPendingIntent = PendingIntent.getBroadcast(
-            context,
-            3,
-            callerInfoIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        // Create full-screen intent for incoming call screen (only shown on accept)
-        val fullScreenIntent = IncomingCallActivity.createIntent(callerName, phoneNumber).apply {
+        // Create intent for tapping notification body (opens in-call UI)
+        val inCallIntent = IncomingCallActivity.createIntent(callerName, phoneNumber).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-
-        val fullScreenPendingIntent = PendingIntent.getActivity(
+        val inCallPendingIntent = PendingIntent.getActivity(
             context,
             0,
-            fullScreenIntent,
+            inCallIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -125,7 +110,7 @@ class CallNotificationManager @Inject constructor(
         }
         val answerPendingIntent = PendingIntent.getBroadcast(
             context,
-            0,
+            1,
             answerIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -139,7 +124,7 @@ class CallNotificationManager @Inject constructor(
         }
         val declinePendingIntent = PendingIntent.getBroadcast(
             context,
-            1,
+            2,
             declineIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -153,33 +138,39 @@ class CallNotificationManager @Inject constructor(
         }
         val messagePendingIntent = PendingIntent.getBroadcast(
             context,
-            2,
+            3,
             messageIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Build notification
-        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            buildCallStyleNotification(
-                callerName,
-                phoneNumber,
-                riskLevel,
-                callerInfoPendingIntent,
-                answerPendingIntent,
-                declinePendingIntent,
+        // Build notification - show notification with actions, not full-screen UI immediately
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_INCOMING_CALLS)
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(callerName)
+            .setContentText(phoneNumber)
+            .setSubText(riskLevel)
+            .setContentIntent(inCallPendingIntent)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .addAction(
+                android.R.drawable.ic_menu_call,
+                "Answer",
+                answerPendingIntent
+            )
+            .addAction(
+                android.R.drawable.ic_menu_send,
+                "Message",
                 messagePendingIntent
             )
-        } else {
-            buildLegacyNotification(
-                callerName,
-                phoneNumber,
-                riskLevel,
-                callerInfoPendingIntent,
-                answerPendingIntent,
-                declinePendingIntent,
-                messagePendingIntent
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Decline",
+                declinePendingIntent
             )
-        }
+            .build()
 
         notificationManager.notify(NOTIFICATION_ID_INCOMING_CALL, notification)
     }
@@ -192,7 +183,7 @@ class CallNotificationManager @Inject constructor(
         callerName: String,
         phoneNumber: String,
         riskLevel: String,
-        callerInfoIntent: PendingIntent,
+        inCallPendingIntent: PendingIntent,
         answerPendingIntent: PendingIntent,
         declinePendingIntent: PendingIntent,
         messagePendingIntent: PendingIntent
@@ -214,9 +205,10 @@ class CallNotificationManager @Inject constructor(
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setStyle(callStyle)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Incoming Call")
+            .setContentTitle(callerName)
             .setContentText(phoneNumber)
-            .setContentIntent(callerInfoIntent)
+            .setSubText(riskLevel)
+            .setContentIntent(inCallPendingIntent)
             .setAutoCancel(false)
             .addAction(
                 android.R.drawable.ic_menu_send,
@@ -233,7 +225,7 @@ class CallNotificationManager @Inject constructor(
         callerName: String,
         phoneNumber: String,
         riskLevel: String,
-        callerInfoIntent: PendingIntent,
+        inCallPendingIntent: PendingIntent,
         answerPendingIntent: PendingIntent,
         declinePendingIntent: PendingIntent,
         messagePendingIntent: PendingIntent
@@ -243,10 +235,10 @@ class CallNotificationManager @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Incoming Call")
-            .setContentText("$callerName - $phoneNumber")
-            .setSubText("Risk: $riskLevel")
-            .setContentIntent(callerInfoIntent)
+            .setContentTitle(callerName)
+            .setContentText(phoneNumber)
+            .setSubText(riskLevel)
+            .setContentIntent(inCallPendingIntent)
             .setAutoCancel(false)
             .addAction(
                 android.R.drawable.ic_menu_call,
@@ -254,14 +246,14 @@ class CallNotificationManager @Inject constructor(
                 answerPendingIntent
             )
             .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "Decline",
-                declinePendingIntent
-            )
-            .addAction(
                 android.R.drawable.ic_menu_send,
                 "Message",
                 messagePendingIntent
+            )
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Decline",
+                declinePendingIntent
             )
             .build()
     }

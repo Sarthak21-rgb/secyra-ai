@@ -33,6 +33,7 @@ class MessagesViewModel @Inject constructor(
     private fun loadConversations() {
         viewModelScope.launch {
             try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
                 val conversations = smsRepository.getConversations()
                 val unreadConversations = smsRepository.getUnreadConversations()
 
@@ -40,13 +41,16 @@ class MessagesViewModel @Inject constructor(
                     conversations = conversations.map { MessageConversation.fromSmsConversation(it) },
                     unreadConversations = unreadConversations.map { MessageConversation.fromSmsConversation(it) },
                     suspiciousConversations = emptyList(), // TODO: Implement security analysis
-                    blockedConversations = emptyList() // TODO: Implement blocked conversations
+                    blockedConversations = emptyList(), // TODO: Implement blocked conversations
+                    isLoading = false
                 )
             } catch (e: Exception) {
                 // Handle error - could be permission denied
                 _uiState.value = _uiState.value.copy(
                     conversations = emptyList(),
-                    unreadConversations = emptyList()
+                    unreadConversations = emptyList(),
+                    isLoading = false,
+                    error = e.message
                 )
             }
         }
@@ -67,5 +71,7 @@ data class MessagesUiState(
     val unreadConversations: List<MessageConversation> = emptyList(),
     val suspiciousConversations: List<MessageConversation> = emptyList(),
     val blockedConversations: List<MessageConversation> = emptyList(),
-    val isDefaultSmsApp: Boolean = false
+    val isDefaultSmsApp: Boolean = false,
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
