@@ -123,6 +123,21 @@
             </intent-filter>
         </activity>
 
+        <!-- Email OAuth Callback Activity for Gmail/Outlook authentication -->
+        <activity
+            android:name=".feature.emails.EmailOAuthActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SecyraAI"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- OAuth redirect URI - will be configured dynamically -->
+                <data android:scheme="com.secyra.ai" />
+            </intent-filter>
+        </activity>
+
         <!-- SMS Activity for handling SMS intents -->
         <activity
             android:name=".feature.messages.SmsActivity"

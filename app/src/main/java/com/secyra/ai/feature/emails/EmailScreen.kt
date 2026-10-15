@@ -1,5 +1,8 @@
 package com.secyra.ai.feature.emails
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,10 +41,14 @@ fun EmailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showConnectionForm by remember { mutableStateOf(false) }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var showPassword by remember { mutableStateOf(false) }
     var isConnecting by remember { mutableStateOf(false) }
+
+    // Gmail OAuth launcher
+    val gmailAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        viewModel.handleGmailAuthResult(result.data)
+    }
 
     Box(
         modifier = Modifier
@@ -62,27 +69,22 @@ fun EmailScreen(
                 )
             }
             !uiState.isAccountConnected && showConnectionForm -> {
-                // Connection form
-                EmailConnectionForm(
-                    email = email,
-                    onEmailChange = { email = it },
-                    password = password,
-                    onPasswordChange = { password = it },
-                    showPassword = showPassword,
-                    onTogglePassword = { showPassword = !showPassword },
+                // Provider selection form
+                EmailProviderSelectionForm(
                     isConnecting = isConnecting,
-                    onConnect = {
+                    onGmailClick = {
                         isConnecting = true
-                        // TODO: Implement actual OAuth connection
-                        // For now, simulate connection
-                        viewModel.onAccountConnected()
+                        val intent = viewModel.startGmailAuth()
+                        gmailAuthLauncher.launch(intent)
+                    },
+                    onOutlookClick = {
+                        isConnecting = true
+                        // Outlook auth is handled differently (async)
+                        // For now, we'll show a message that it's coming soon
                         isConnecting = false
-                        showConnectionForm = false
                     },
                     onCancel = {
                         showConnectionForm = false
-                        email = ""
-                        password = ""
                     }
                 )
             }
@@ -90,7 +92,10 @@ fun EmailScreen(
                 EmptyEmailsContent()
             }
             uiState.isAccountConnected -> {
-                EmailsListContent(emails = uiState.emails)
+                EmailsListContent(
+                    emails = uiState.emails,
+                    onDisconnect = { viewModel.disconnectAccount() }
+                )
             }
         }
     }
@@ -109,13 +114,13 @@ fun EmailEmptyState(
     ) {
         // Envelope illustration with + badge
         Box(
-            modifier = Modifier.size(120.dp),
+            modifier = Modifier.size(140.dp),
             contentAlignment = Alignment.Center
         ) {
             // Background container
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(120.dp)
                     .background(
                         Color(0xFF0A1520).copy(alpha = 0.8f),
                         RoundedCornerShape(24.dp)
@@ -130,12 +135,12 @@ fun EmailEmptyState(
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(72.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(72.dp)
                             .background(
                                 Brush.horizontalGradient(
                                     colors = listOf(AzureBlue, TiffanyBlue)
@@ -147,7 +152,7 @@ fun EmailEmptyState(
                         imageVector = Icons.Default.Email,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(72.dp)
                     )
                 }
             }
@@ -344,15 +349,10 @@ fun FeatureRow(
 }
 
 @Composable
-fun EmailConnectionForm(
-    email: String,
-    onEmailChange: (String) -> Unit,
-    password: String,
-    onPasswordChange: (String) -> Unit,
-    showPassword: Boolean,
-    onTogglePassword: () -> Unit,
+fun EmailProviderSelectionForm(
     isConnecting: Boolean,
-    onConnect: () -> Unit,
+    onGmailClick: () -> Unit,
+    onOutlookClick: () -> Unit,
     onCancel: () -> Unit
 ) {
     Column(
@@ -386,114 +386,107 @@ fun EmailConnectionForm(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Text(
                     text = "Sign in to connect your inbox to Secyra AI.",
                     color = SecyraTextSecondary,
                     fontSize = 14.sp
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Email field
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
-                    label = {
-                        Text(
-                            "Email address",
-                            color = SecyraTextMuted
-                        )
-                    },
-                    placeholder = {
-                        Text(
-                            "Enter your email address",
-                            color = SecyraTextMuted
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF0A1520),
-                        unfocusedContainerColor = Color(0xFF0A1520),
-                        focusedIndicatorColor = TiffanyBlue,
-                        unfocusedIndicatorColor = SecyraBorder,
-                        focusedTextColor = SecyraWhite,
-                        unfocusedTextColor = SecyraWhite,
-                        cursorColor = TiffanyBlue
-                    ),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                
-                // Password field
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = onPasswordChange,
-                    label = {
-                        Text(
-                            "Password",
-                            color = SecyraTextMuted
-                        )
-                    },
-                    placeholder = {
-                        Text(
-                            "Enter your password",
-                            color = SecyraTextMuted
-                        )
-                    },
-                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = onTogglePassword) {
-                            Icon(
-                                imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (showPassword) "Hide password" else "Show password",
-                                tint = SecyraTextMuted
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF0A1520),
-                        unfocusedContainerColor = Color(0xFF0A1520),
-                        focusedIndicatorColor = TiffanyBlue,
-                        unfocusedIndicatorColor = SecyraBorder,
-                        focusedTextColor = SecyraWhite,
-                        unfocusedTextColor = SecyraWhite,
-                        cursorColor = TiffanyBlue
-                    ),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Add Account button
+
+                // Gmail button
                 Button(
-                    onClick = onConnect,
-                    enabled = email.isNotBlank() && password.isNotBlank() && !isConnecting,
+                    onClick = onGmailClick,
+                    enabled = !isConnecting,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = TiffanyBlue
+                        containerColor = Color.Transparent
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(25.dp)
+                        .height(56.dp)
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(AzureBlue, TiffanyBlue)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    if (isConnecting) {
-                        CircularProgressIndicator(
-                            color = Color.Black,
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = null,
+                            tint = SecyraWhite,
                             modifier = Modifier.size(24.dp)
                         )
-                    } else {
                         Text(
-                            text = "Add Account",
-                            color = Color.Black,
+                            text = "Continue with Gmail",
+                            color = SecyraWhite,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
-                
+
+                // Outlook button
+                Button(
+                    onClick = onOutlookClick,
+                    enabled = !isConnecting,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .border(
+                            width = 1.dp,
+                            color = SecyraBorder,
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MailOutline,
+                            contentDescription = null,
+                            tint = SecyraTextSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "Continue with Outlook",
+                            color = SecyraTextSecondary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                if (isConnecting) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            color = TiffanyBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Connecting...",
+                            color = SecyraTextSecondary,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
                 // Cancel button
                 TextButton(
                     onClick = onCancel,
@@ -620,14 +613,46 @@ fun EmptyEmailsContent() {
 }
 
 @Composable
-fun EmailsListContent(emails: List<Email>) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+fun EmailsListContent(
+    emails: List<Email>,
+    onDisconnect: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize()
     ) {
-        items(emails) { email ->
-            EmailRowCard(email = email)
+        // Header with disconnect button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Inbox",
+                color = SecyraWhite,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            TextButton(
+                onClick = onDisconnect
+            ) {
+                Text(
+                    text = "Disconnect",
+                    color = RiskHigh,
+                    fontSize = 14.sp
+                )
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(emails) { email ->
+                EmailRowCard(email = email)
+            }
         }
     }
 }

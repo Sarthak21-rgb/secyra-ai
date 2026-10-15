@@ -25,6 +25,8 @@ import com.secyra.ai.data.repository.CallLogRepository
 import com.secyra.ai.data.repository.ContactRepository
 import com.secyra.ai.data.repository.EmailRepository
 import com.secyra.ai.data.repository.SmsRepository
+import com.secyra.ai.feature.emails.GmailOAuthManager
+import com.secyra.ai.feature.emails.OutlookOAuthManager
 import com.secyra.ai.feature.messages.SmsSecurityAnalyzer
 import com.secyra.ai.feature.search.SearchViewModel
 import dagger.Module
@@ -32,6 +34,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import io.ktor.client.HttpClient
 import javax.inject.Singleton
 
 @Module
@@ -159,11 +162,36 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideHttpClient(): HttpClient {
+        return HttpClient()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGmailOAuthManager(
+        @ApplicationContext context: Context,
+        httpClient: HttpClient
+    ): GmailOAuthManager {
+        return GmailOAuthManager(context, httpClient)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOutlookOAuthManager(
+        @ApplicationContext context: Context
+    ): OutlookOAuthManager {
+        return OutlookOAuthManager(context)
+    }
+
+    @Provides
+    @Singleton
     fun provideEmailRepository(
         @ApplicationContext context: Context,
-        permissionManager: PermissionManager
+        permissionManager: PermissionManager,
+        gmailOAuthManager: GmailOAuthManager,
+        outlookOAuthManager: OutlookOAuthManager
     ): EmailRepository {
-        return EmailRepository(context, permissionManager)
+        return EmailRepository(context, permissionManager, gmailOAuthManager, outlookOAuthManager)
     }
 
     @Provides

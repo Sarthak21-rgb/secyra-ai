@@ -50,6 +50,11 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/io.netty.versions.properties"
+            excludes += "META-INF/DEPENDENCIES"
+            pickFirsts += "META-INF/INDEX.LIST"
+            pickFirsts += "META-INF/DEPENDENCIES"
         }
     }
 }
@@ -117,6 +122,12 @@ dependencies {
 
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
+
+    // Google Identity Services for OAuth
+    implementation("com.google.android.gms:play-services-auth:21.1.0")
+    implementation("com.google.api-client:google-api-client-android:2.2.0")
+    implementation("com.google.api-client:google-api-client-gson:2.2.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.23.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
